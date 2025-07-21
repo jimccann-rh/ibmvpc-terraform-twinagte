@@ -29,4 +29,4 @@ enable_floating_ip = true
 # Get these values from your tgconnect file or Twingate admin console
 twingate_access_token = "your-twingate-access-token-here"
 twingate_refresh_token = "your-twingate-refresh-token-here"
-twingate_network = ""  # Your Twingate network name (optional, default: redhat) 
+twingate_network = ""  # Your Twingate network name (optional, default: ) 
