@@ -191,6 +191,12 @@ packages:
   - curl
 
 write_files:
+  - path: /tmp/cloud-init-debug.log
+    permissions: '0644'
+    owner: root:root
+    content: |
+      Cloud-init write_files section executed at $(date)
+      
   - path: /opt/twingate-setup.sh
     permissions: '0755'
     owner: root:root
@@ -262,6 +268,9 @@ write_files:
       echo "========================================" >> "$LOG_FILE"
 
 runcmd:
+  # Debug: Log that runcmd started
+  - echo "$(date): Cloud-init runcmd section started" >> /tmp/cloud-init-runcmd.log
+  
   # Create log directory and set permissions
   - mkdir -p /var/log
   - touch /var/log/twingate-install.log
@@ -270,11 +279,70 @@ runcmd:
   # Log cloud-init start
   - echo "$(date): Cloud-init runcmd section started" >> /var/log/twingate-install.log
   
+  # Debug: Check if twingate-setup.sh was created by write_files
+  - echo "$(date): Checking for /opt/twingate-setup.sh..." >> /var/log/twingate-install.log
+  - ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo "$(date): /opt/twingate-setup.sh not found, creating inline..." >> /var/log/twingate-install.log
+  
+  # Fallback: Create the script inline if write_files failed
+  - |
+    if [ ! -f /opt/twingate-setup.sh ]; then
+      echo "$(date): Creating twingate-setup.sh inline as fallback" >> /var/log/twingate-install.log
+      cat > /opt/twingate-setup.sh << 'EOF'
+    #!/bin/bash
+    
+    # Twingate Connector Setup Script - Inline Fallback Version
+    LOG_FILE="/var/log/twingate-install.log"
+    
+    echo "========================================" >> "$LOG_FILE"
+    echo "$(date): Starting Twingate connector installation (fallback script)" >> "$LOG_FILE"
+    echo "========================================" >> "$LOG_FILE"
+    
+    # Set environment variables from Terraform
+    export TWINGATE_ACCESS_TOKEN="${var.twingate_access_token}"
+    export TWINGATE_REFRESH_TOKEN="${var.twingate_refresh_token}"
+    export TWINGATE_NETWORK="${var.twingate_network}"
+    export TWINGATE_LABEL_DEPLOYED_BY="terraform-ibm-centos-fallback"
+    
+    echo "$(date): Environment variables set" >> "$LOG_FILE"
+    echo "$(date): TWINGATE_NETWORK=$TWINGATE_NETWORK" >> "$LOG_FILE"
+    
+    # Update system
+    echo "$(date): Updating system packages..." >> "$LOG_FILE"
+    dnf update -y >> "$LOG_FILE" 2>&1
+    
+    # Install packages
+    echo "$(date): Installing curl and wget..." >> "$LOG_FILE"
+    dnf install -y curl wget >> "$LOG_FILE" 2>&1
+    
+    # Install Twingate connector
+    echo "$(date): Installing Twingate connector..." >> "$LOG_FILE"
+    if curl -fsSL "https://binaries.twingate.com/connector/setup.sh" | bash >> "$LOG_FILE" 2>&1; then
+      echo "$(date): Twingate installation completed successfully" >> "$LOG_FILE"
+      systemctl enable twingate-connector >> "$LOG_FILE" 2>&1
+      systemctl start twingate-connector >> "$LOG_FILE" 2>&1
+      systemctl status twingate-connector >> "$LOG_FILE" 2>&1
+    else
+      echo "$(date): Twingate installation failed" >> "$LOG_FILE"
+    fi
+    
+    echo "$(date): Setup script completed" >> "$LOG_FILE"
+    EOF
+      chmod +x /opt/twingate-setup.sh
+      echo "$(date): Fallback script created successfully" >> /var/log/twingate-install.log
+    fi
+  
   # Execute the Twingate setup script
+  - echo "$(date): Executing twingate setup script..." >> /var/log/twingate-install.log
   - /opt/twingate-setup.sh
   
   # Log cloud-init completion
   - echo "$(date): Cloud-init runcmd section completed" >> /var/log/twingate-install.log
+  
+  # Debug: Create summary of what happened
+  - echo "$(date): === DEBUG SUMMARY ===" >> /var/log/twingate-install.log
+  - echo "$(date): Cloud-init user-data processing completed" >> /var/log/twingate-install.log
+  - ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo "Setup script still missing" >> /var/log/twingate-install.log
+  - ls -la /tmp/cloud-init-debug.log >> /var/log/twingate-install.log 2>&1 || echo "Debug log missing" >> /var/log/twingate-install.log
 
 final_message: "Twingate connector has been installed via Terraform cloud-init on CentOS Stream 9"
 EOF
@@ -354,7 +422,12 @@ output "subnet_id" {
 
 output "twingate_install_log" {
   description = "Commands to check Twingate installation"
-  value       = var.enable_floating_ip ? "SSH: ssh root@${ibm_is_floating_ip.twingate_fip[0].address} | Logs: tail -f /var/log/twingate-install.log | Cloud-init: tail -f /var/log/cloud-init-output.log" : "Use private IP - SSH: ssh root@${ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ipv4_address} | Logs: tail -f /var/log/twingate-install.log"
+  value       = var.enable_floating_ip ? "SSH: ssh root@${ibm_is_floating_ip.twingate_fip[0].address} | Check: ls -la /opt/twingate-setup.sh /tmp/cloud-init-*.log | Logs: tail -f /var/log/twingate-install.log" : "SSH: ssh root@${ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ipv4_address} | Check: ls -la /opt/twingate-setup.sh /tmp/cloud-init-*.log"
+}
+
+output "debug_commands" {
+  description = "Debug commands if installation fails"
+  value       = "cloud-init status && ls -la /opt/twingate-setup.sh /tmp/cloud-init-*.log && tail -20 /var/log/cloud-init-output.log"
 }
 
 output "floating_ip_enabled" {
