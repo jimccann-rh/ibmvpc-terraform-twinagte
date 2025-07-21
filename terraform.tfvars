@@ -12,7 +12,7 @@ resource_group = "default"
 
 # SSH key name (REQUIRED - must exist in IBM Cloud)
 # Create an SSH key in IBM Cloud first: ibmcloud is key-create <key-name> @~/.ssh/id_rsa.pub
-ssh_key_name = "my-ssh-key"
+#ssh_key_name = "my-ssh-key"
 
 # Instance name (optional, default: twingate-connector-vsi)
 instance_name = "twingate-connector"
