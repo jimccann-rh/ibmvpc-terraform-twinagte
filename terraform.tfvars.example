@@ -8,11 +8,11 @@ region = "us-east"
 zone = "us-east-1"
 
 # Resource group name (optional, default: default)
-resource_group = "default"
+resource_group = "Default"
 
 # SSH key name (REQUIRED - must exist in IBM Cloud)
 # Create an SSH key in IBM Cloud first: ibmcloud is key-create <key-name> @~/.ssh/id_rsa.pub
-ssh_key_name = "my-ssh-key"
+#ssh_key_name = "my-ssh-key"
 
 # Instance name (optional, default: twingate-connector-vsi)
 instance_name = "twingate-connector"
@@ -29,4 +29,4 @@ enable_floating_ip = true
 # Get these values from your tgconnect file or Twingate admin console
 twingate_access_token = "your-twingate-access-token-here"
 twingate_refresh_token = "your-twingate-refresh-token-here"
-twingate_network = ""  # Your Twingate network name (optional, default: ) 
+twingate_network = "mynetwork"  # Your Twingate network name (optional, default: mynetwork) 

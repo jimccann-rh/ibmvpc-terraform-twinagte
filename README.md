@@ -78,7 +78,7 @@ resource_group = "default"
 instance_name = "twingate-connector"
 instance_profile = "bx2-2x8"
 enable_floating_ip = true  # Set to false for private-only access
-twingate_network = ""  # Your Twingate network name
+twingate_network = "mynetwork"  # Your Twingate network name
 ```
 
 #### Getting Twingate Tokens
@@ -101,7 +101,7 @@ cat > terraform.tfvars << EOF
 ssh_key_name = "twingate-connector-key"
 twingate_access_token = "$TWINGATE_ACCESS_TOKEN"
 twingate_refresh_token = "$TWINGATE_REFRESH_TOKEN"
-twingate_network = ""
+twingate_network = "mynetwork"
 instance_name = "my-twingate-connector"
 EOF
 
@@ -184,9 +184,7 @@ This Terraform configuration creates:
 
 ### Security Groups Rules
 - **Inbound SSH (Port 22)**: Access from anywhere
-- **Outbound HTTPS (Port 443)**: Twingate communication
-- **Outbound HTTP (Port 80)**: Package downloads
-- **Outbound DNS (Port 53)**: Name resolution
+- **Outbound All Traffic**: Unrestricted outbound access to all destinations and ports
 
 ## Files Created
 
@@ -225,7 +223,7 @@ Available regions:
 
 ### Twingate Configuration
 The Twingate connector is configured with:
-- **Network**: ``
+- **Network**: `mynetwork`
 - **Access Token**: From your `tgconnect` file
 - **Refresh Token**: From your `tgconnect` file
 - **Deployment Label**: `terraform-ibm`

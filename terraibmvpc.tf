@@ -78,7 +78,7 @@ variable "twingate_refresh_token" {
 variable "twingate_network" {
   description = "Twingate network name"
   type        = string
-  default     = ""
+  default     = "mynetwork"
 }
 
 # Data sources
@@ -150,40 +150,11 @@ resource "ibm_is_security_group_rule" "ssh_inbound" {
   }
 }
 
-# Security group rule for HTTPS outbound (for Twingate)
-resource "ibm_is_security_group_rule" "https_outbound" {
+# Security group rule for all outbound traffic
+resource "ibm_is_security_group_rule" "all_outbound" {
   group     = ibm_is_security_group.twingate_sg.id
   direction = "outbound"
   remote    = "0.0.0.0/0"
-
-  tcp {
-    port_min = 443
-    port_max = 443
-  }
-}
-
-# Security group rule for HTTP outbound (for package downloads)
-resource "ibm_is_security_group_rule" "http_outbound" {
-  group     = ibm_is_security_group.twingate_sg.id
-  direction = "outbound"
-  remote    = "0.0.0.0/0"
-
-  tcp {
-    port_min = 80
-    port_max = 80
-  }
-}
-
-# Security group rule for DNS outbound
-resource "ibm_is_security_group_rule" "dns_outbound" {
-  group     = ibm_is_security_group.twingate_sg.id
-  direction = "outbound"
-  remote    = "0.0.0.0/0"
-
-  udp {
-    port_min = 53
-    port_max = 53
-  }
 }
 
 # Create public gateway for internet access
