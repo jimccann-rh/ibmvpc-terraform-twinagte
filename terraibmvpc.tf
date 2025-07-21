@@ -182,8 +182,8 @@ locals {
   user_data = <<-EOF
 #cloud-config
 
-# Cloud-init to run Twingate connector setup on first boot
-# Based on the tgconnect file - configured for CentOS Stream 9
+# Cloud-init configuration for Twingate connector setup on first boot
+# Configured for CentOS Stream 9
 
 package_update: true
 
@@ -255,8 +255,10 @@ write_files:
       echo "========================================" >> "$LOG_FILE"
 
 runcmd:
-  # Debug: Log that runcmd started
+  # Debug: Log that runcmd started and cloud-init info
   - echo "$(date): Cloud-init runcmd section started" >> /tmp/cloud-init-runcmd.log
+  - echo "$(date): Cloud-init version info" >> /tmp/cloud-init-runcmd.log
+  - cloud-init --version >> /tmp/cloud-init-runcmd.log 2>&1 || echo "cloud-init command not available" >> /tmp/cloud-init-runcmd.log
   
   # Create log directory and set permissions
   - mkdir -p /var/log
@@ -324,7 +326,7 @@ resource "ibm_is_instance" "twingate_vsi" {
   profile        = var.instance_profile
   image          = data.ibm_is_image.os_image.id
   resource_group = data.ibm_resource_group.resource_group.id
-  user_data      = base64encode(local.user_data)
+  user_data      = local.user_data
 
   primary_network_interface {
     subnet          = ibm_is_subnet.twingate_subnet.id
