@@ -36,7 +36,7 @@ variable "zone" {
 variable "resource_group" {
   description = "Resource group name"
   type        = string
-  default     = "default"
+  default     = "Default"
 }
 
 variable "ssh_key_name" {
