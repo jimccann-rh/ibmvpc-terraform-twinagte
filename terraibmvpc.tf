@@ -227,41 +227,28 @@ write_files:
       
       # Ensure system is up to date
       echo "$(date): Updating system packages..." >> "$LOG_FILE"
-      if dnf update -y >> "$LOG_FILE" 2>&1; then
-        echo "$(date): System update completed successfully" >> "$LOG_FILE"
-      else
-        echo "$(date): System update failed with exit code $?" >> "$LOG_FILE"
-      fi
+      dnf update -y >> "$LOG_FILE" 2>&1
+      echo "$(date): System update completed" >> "$LOG_FILE"
       
       # Install required packages
       echo "$(date): Installing required packages..." >> "$LOG_FILE"
-      if dnf install -y curl wget >> "$LOG_FILE" 2>&1; then
-        echo "$(date): Package installation completed successfully" >> "$LOG_FILE"
-      else
-        echo "$(date): Package installation failed with exit code $?" >> "$LOG_FILE"
-      fi
+      dnf install -y curl wget >> "$LOG_FILE" 2>&1
+      echo "$(date): Package installation completed" >> "$LOG_FILE"
       
       # Download and execute Twingate setup script
       echo "$(date): Downloading and executing Twingate connector setup..." >> "$LOG_FILE"
-      if curl -fsSL "https://binaries.twingate.com/connector/setup.sh" | bash >> "$LOG_FILE" 2>&1; then
-        echo "$(date): Twingate connector installation completed successfully" >> "$LOG_FILE"
-        
-        # Enable and start the service
-        echo "$(date): Enabling Twingate connector service..." >> "$LOG_FILE"
-        if systemctl enable twingate-connector >> "$LOG_FILE" 2>&1; then
-          echo "$(date): Service enabled successfully" >> "$LOG_FILE"
-        else
-          echo "$(date): Service enable failed with exit code $?" >> "$LOG_FILE"
-        fi
-        
-        # Check service status
-        echo "$(date): Checking service status..." >> "$LOG_FILE"
-        systemctl status twingate-connector >> "$LOG_FILE" 2>&1 || echo "$(date): Service status check completed" >> "$LOG_FILE"
-        
-      else
-        echo "$(date): Twingate connector installation failed with exit code $?" >> "$LOG_FILE"
-        exit 1
-      fi
+      curl -fsSL "https://binaries.twingate.com/connector/setup.sh" | bash >> "$LOG_FILE" 2>&1
+      echo "$(date): Twingate connector installation completed" >> "$LOG_FILE"
+      
+      # Enable and start the service
+      echo "$(date): Enabling Twingate connector service..." >> "$LOG_FILE"
+      systemctl enable twingate-connector >> "$LOG_FILE" 2>&1
+      systemctl start twingate-connector >> "$LOG_FILE" 2>&1
+      echo "$(date): Service operations completed" >> "$LOG_FILE"
+      
+      # Check service status
+      echo "$(date): Checking service status..." >> "$LOG_FILE"
+      systemctl status twingate-connector >> "$LOG_FILE" 2>&1
       
       echo "========================================" >> "$LOG_FILE"
       echo "$(date): Twingate setup script completed" >> "$LOG_FILE"
@@ -281,54 +268,35 @@ runcmd:
   
   # Debug: Check if twingate-setup.sh was created by write_files
   - echo "$(date): Checking for /opt/twingate-setup.sh..." >> /var/log/twingate-install.log
-  - ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo "$(date): /opt/twingate-setup.sh not found, creating inline..." >> /var/log/twingate-install.log
+  - "ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo '$(date): /opt/twingate-setup.sh not found, creating inline...' >> /var/log/twingate-install.log"
   
-  # Fallback: Create the script inline if write_files failed
+  # Fallback: Create the script inline if write_files failed  
+  - "test -f /opt/twingate-setup.sh || echo '$(date): Creating fallback script' >> /var/log/twingate-install.log"
   - |
     if [ ! -f /opt/twingate-setup.sh ]; then
-      echo "$(date): Creating twingate-setup.sh inline as fallback" >> /var/log/twingate-install.log
-      cat > /opt/twingate-setup.sh << 'EOF'
+      cat > /opt/twingate-setup.sh << 'SCRIPT_EOF'
     #!/bin/bash
-    
-    # Twingate Connector Setup Script - Inline Fallback Version
     LOG_FILE="/var/log/twingate-install.log"
-    
-    echo "========================================" >> "$LOG_FILE"
-    echo "$(date): Starting Twingate connector installation (fallback script)" >> "$LOG_FILE"
-    echo "========================================" >> "$LOG_FILE"
-    
-    # Set environment variables from Terraform
+    echo "========================================"
+    echo "$(date): Starting Twingate connector installation (fallback)"
+    echo "========================================"
+    echo "$(date): Setting environment variables"
     export TWINGATE_ACCESS_TOKEN="${var.twingate_access_token}"
-    export TWINGATE_REFRESH_TOKEN="${var.twingate_refresh_token}"
+    export TWINGATE_REFRESH_TOKEN="${var.twingate_refresh_token}" 
     export TWINGATE_NETWORK="${var.twingate_network}"
     export TWINGATE_LABEL_DEPLOYED_BY="terraform-ibm-centos-fallback"
-    
-    echo "$(date): Environment variables set" >> "$LOG_FILE"
-    echo "$(date): TWINGATE_NETWORK=$TWINGATE_NETWORK" >> "$LOG_FILE"
-    
-    # Update system
-    echo "$(date): Updating system packages..." >> "$LOG_FILE"
-    dnf update -y >> "$LOG_FILE" 2>&1
-    
-    # Install packages
-    echo "$(date): Installing curl and wget..." >> "$LOG_FILE"
-    dnf install -y curl wget >> "$LOG_FILE" 2>&1
-    
-    # Install Twingate connector
-    echo "$(date): Installing Twingate connector..." >> "$LOG_FILE"
-    if curl -fsSL "https://binaries.twingate.com/connector/setup.sh" | bash >> "$LOG_FILE" 2>&1; then
-      echo "$(date): Twingate installation completed successfully" >> "$LOG_FILE"
-      systemctl enable twingate-connector >> "$LOG_FILE" 2>&1
-      systemctl start twingate-connector >> "$LOG_FILE" 2>&1
-      systemctl status twingate-connector >> "$LOG_FILE" 2>&1
-    else
-      echo "$(date): Twingate installation failed" >> "$LOG_FILE"
-    fi
-    
-    echo "$(date): Setup script completed" >> "$LOG_FILE"
-    EOF
+    echo "$(date): Updating system packages"
+    dnf update -y
+    echo "$(date): Installing curl and wget"
+    dnf install -y curl wget
+    echo "$(date): Installing Twingate connector"
+    curl -fsSL "https://binaries.twingate.com/connector/setup.sh" | bash
+    systemctl enable twingate-connector
+    systemctl start twingate-connector
+    systemctl status twingate-connector
+    echo "$(date): Setup script completed"
+    SCRIPT_EOF
       chmod +x /opt/twingate-setup.sh
-      echo "$(date): Fallback script created successfully" >> /var/log/twingate-install.log
     fi
   
   # Execute the Twingate setup script
@@ -341,8 +309,8 @@ runcmd:
   # Debug: Create summary of what happened
   - echo "$(date): === DEBUG SUMMARY ===" >> /var/log/twingate-install.log
   - echo "$(date): Cloud-init user-data processing completed" >> /var/log/twingate-install.log
-  - ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo "Setup script still missing" >> /var/log/twingate-install.log
-  - ls -la /tmp/cloud-init-debug.log >> /var/log/twingate-install.log 2>&1 || echo "Debug log missing" >> /var/log/twingate-install.log
+  - "ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo 'Setup script still missing' >> /var/log/twingate-install.log"
+  - "ls -la /tmp/cloud-init-debug.log >> /var/log/twingate-install.log 2>&1 || echo 'Debug log missing' >> /var/log/twingate-install.log"
 
 final_message: "Twingate connector has been installed via Terraform cloud-init on CentOS Stream 9"
 EOF
@@ -427,7 +395,7 @@ output "twingate_install_log" {
 
 output "debug_commands" {
   description = "Debug commands if installation fails"
-  value       = "cloud-init status && ls -la /opt/twingate-setup.sh /tmp/cloud-init-*.log && tail -20 /var/log/cloud-init-output.log"
+  value       = "cloud-init status; ls -la /opt/twingate-setup.sh /tmp/cloud-init-*.log; tail -20 /var/log/cloud-init-output.log"
 }
 
 output "floating_ip_enabled" {
