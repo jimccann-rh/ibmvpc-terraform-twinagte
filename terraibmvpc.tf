@@ -191,22 +191,90 @@ packages:
   - curl
 
 write_files:
-  - path: /var/log/twingate-install.log
-    permissions: '0644'
+  - path: /opt/twingate-setup.sh
+    permissions: '0755'
     owner: root:root
     content: |
-      Twingate connector installation log
+      #!/bin/bash
+      
+      # Twingate Connector Setup Script with Enhanced Logging
+      LOG_FILE="/var/log/twingate-install.log"
+      
+      # Create log file and set permissions
+      touch "$LOG_FILE"
+      chmod 644 "$LOG_FILE"
+      
+      echo "========================================" >> "$LOG_FILE"
+      echo "$(date): Starting Twingate connector installation on CentOS Stream 9" >> "$LOG_FILE"
+      echo "Cloud-init user-data execution log" >> "$LOG_FILE"
+      echo "========================================" >> "$LOG_FILE"
+      
+      # Set environment variables from Terraform
+      export TWINGATE_ACCESS_TOKEN="${var.twingate_access_token}"
+      export TWINGATE_REFRESH_TOKEN="${var.twingate_refresh_token}"
+      export TWINGATE_NETWORK="${var.twingate_network}"
+      export TWINGATE_LABEL_DEPLOYED_BY="terraform-ibm-centos"
+      
+      echo "$(date): Environment variables set" >> "$LOG_FILE"
+      echo "$(date): TWINGATE_NETWORK=$TWINGATE_NETWORK" >> "$LOG_FILE"
+      echo "$(date): TWINGATE_LABEL_DEPLOYED_BY=$TWINGATE_LABEL_DEPLOYED_BY" >> "$LOG_FILE"
+      
+      # Ensure system is up to date
+      echo "$(date): Updating system packages..." >> "$LOG_FILE"
+      if dnf update -y >> "$LOG_FILE" 2>&1; then
+        echo "$(date): System update completed successfully" >> "$LOG_FILE"
+      else
+        echo "$(date): System update failed with exit code $?" >> "$LOG_FILE"
+      fi
+      
+      # Install required packages
+      echo "$(date): Installing required packages..." >> "$LOG_FILE"
+      if dnf install -y curl wget >> "$LOG_FILE" 2>&1; then
+        echo "$(date): Package installation completed successfully" >> "$LOG_FILE"
+      else
+        echo "$(date): Package installation failed with exit code $?" >> "$LOG_FILE"
+      fi
+      
+      # Download and execute Twingate setup script
+      echo "$(date): Downloading and executing Twingate connector setup..." >> "$LOG_FILE"
+      if curl -fsSL "https://binaries.twingate.com/connector/setup.sh" | bash >> "$LOG_FILE" 2>&1; then
+        echo "$(date): Twingate connector installation completed successfully" >> "$LOG_FILE"
+        
+        # Enable and start the service
+        echo "$(date): Enabling Twingate connector service..." >> "$LOG_FILE"
+        if systemctl enable twingate-connector >> "$LOG_FILE" 2>&1; then
+          echo "$(date): Service enabled successfully" >> "$LOG_FILE"
+        else
+          echo "$(date): Service enable failed with exit code $?" >> "$LOG_FILE"
+        fi
+        
+        # Check service status
+        echo "$(date): Checking service status..." >> "$LOG_FILE"
+        systemctl status twingate-connector >> "$LOG_FILE" 2>&1 || echo "$(date): Service status check completed" >> "$LOG_FILE"
+        
+      else
+        echo "$(date): Twingate connector installation failed with exit code $?" >> "$LOG_FILE"
+        exit 1
+      fi
+      
+      echo "========================================" >> "$LOG_FILE"
+      echo "$(date): Twingate setup script completed" >> "$LOG_FILE"
+      echo "========================================" >> "$LOG_FILE"
 
 runcmd:
-  - echo "$(date): Starting Twingate connector installation on CentOS Stream 9" >> /var/log/twingate-install.log
-  # Ensure system is up to date
-  - dnf update -y >> /var/log/twingate-install.log 2>&1
-  # Install required packages
-  - dnf install -y curl wget >> /var/log/twingate-install.log 2>&1
-  # Run the exact command from tgconnect file using Terraform variables
-  - curl "https://binaries.twingate.com/connector/setup.sh" | sudo TWINGATE_ACCESS_TOKEN="${var.twingate_access_token}" TWINGATE_REFRESH_TOKEN="${var.twingate_refresh_token}" TWINGATE_NETWORK="${var.twingate_network}" TWINGATE_LABEL_DEPLOYED_BY="terraform-ibm-centos" bash >> /var/log/twingate-install.log 2>&1
-  - echo "$(date): Twingate connector installation completed" >> /var/log/twingate-install.log
-  - systemctl enable twingate-connector >> /var/log/twingate-install.log 2>&1 || echo "Service enable failed" >> /var/log/twingate-install.log
+  # Create log directory and set permissions
+  - mkdir -p /var/log
+  - touch /var/log/twingate-install.log
+  - chmod 644 /var/log/twingate-install.log
+  
+  # Log cloud-init start
+  - echo "$(date): Cloud-init runcmd section started" >> /var/log/twingate-install.log
+  
+  # Execute the Twingate setup script
+  - /opt/twingate-setup.sh
+  
+  # Log cloud-init completion
+  - echo "$(date): Cloud-init runcmd section completed" >> /var/log/twingate-install.log
 
 final_message: "Twingate connector has been installed via Terraform cloud-init on CentOS Stream 9"
 EOF
@@ -285,8 +353,8 @@ output "subnet_id" {
 }
 
 output "twingate_install_log" {
-  description = "Command to check Twingate installation log"
-  value       = var.enable_floating_ip ? "ssh root@${ibm_is_floating_ip.twingate_fip[0].address} 'tail -f /var/log/twingate-install.log'" : "Use private IP to check logs: ssh root@${ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ipv4_address} 'tail -f /var/log/twingate-install.log'"
+  description = "Commands to check Twingate installation"
+  value       = var.enable_floating_ip ? "SSH: ssh root@${ibm_is_floating_ip.twingate_fip[0].address} | Logs: tail -f /var/log/twingate-install.log | Cloud-init: tail -f /var/log/cloud-init-output.log" : "Use private IP - SSH: ssh root@${ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ipv4_address} | Logs: tail -f /var/log/twingate-install.log"
 }
 
 output "floating_ip_enabled" {

@@ -160,11 +160,21 @@ ssh root@<public_ip>
 # Check installation log
 tail -f /var/log/twingate-install.log
 
+# If log file doesn't exist, check cloud-init logs
+sudo tail -f /var/log/cloud-init-output.log
+sudo tail -f /var/log/cloud-init.log
+
 # Check connector service status
 systemctl status twingate-connector
 
 # Check cloud-init status
 cloud-init status
+
+# Check if setup script was created
+ls -la /opt/twingate-setup.sh
+
+# Manually run setup script if needed
+sudo /opt/twingate-setup.sh
 ```
 
 ## Architecture
@@ -256,12 +266,26 @@ The Twingate connector is configured with:
    ibmcloud resource groups
    ```
 
-4. **Twingate Installation Failed**
+4. **Twingate Installation Failed or Log File Missing**
    ```bash
    # SSH to the instance and check logs
    ssh root@<public_ip>
-   tail -f /var/log/twingate-install.log
+   
+   # First, check if cloud-init completed
+   cloud-init status
+   
+   # If twingate-install.log doesn't exist, check cloud-init logs
    tail -f /var/log/cloud-init-output.log
+   tail -f /var/log/cloud-init.log
+   
+   # Check if the setup script was created
+   ls -la /opt/twingate-setup.sh
+   
+   # If script exists but log doesn't, run manually
+   sudo /opt/twingate-setup.sh
+   
+   # Check for any errors in system logs
+   journalctl -u cloud-init --no-pager
    ```
 
 ### Debugging Commands
@@ -278,6 +302,35 @@ ssh root@<public_ip> 'tail -f /var/log/cloud-init.log'
 
 # Check system logs
 ssh root@<public_ip> 'journalctl -f'
+```
+
+### Missing Log File Troubleshooting
+
+If `/var/log/twingate-install.log` is not present on the VSI:
+
+```bash
+# 1. Check cloud-init status first
+cloud-init status
+
+# 2. Check cloud-init logs for errors
+tail -100 /var/log/cloud-init.log | grep -i error
+tail -100 /var/log/cloud-init-output.log
+
+# 3. Verify the setup script was created
+ls -la /opt/twingate-setup.sh
+cat /opt/twingate-setup.sh
+
+# 4. Check if cloud-init ran the runcmd section
+grep -A 20 -B 5 "runcmd" /var/log/cloud-init.log
+
+# 5. Manually create log file and run setup if needed
+sudo mkdir -p /var/log
+sudo touch /var/log/twingate-install.log
+sudo chmod 644 /var/log/twingate-install.log
+sudo /opt/twingate-setup.sh
+
+# 6. Check cloud-init final status
+cat /var/log/cloud-init-output.log | tail -20
 ```
 
 ## Cleanup
