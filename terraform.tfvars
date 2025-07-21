@@ -8,7 +8,7 @@ region = "us-east"
 zone = "us-east-1"
 
 # Resource group name (optional, default: default)
-resource_group = "default"
+resource_group = "Default"
 
 # SSH key name (REQUIRED - must exist in IBM Cloud)
 # Create an SSH key in IBM Cloud first: ibmcloud is key-create <key-name> @~/.ssh/id_rsa.pub
