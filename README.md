@@ -78,7 +78,7 @@ resource_group = "default"
 instance_name = "twingate-connector"
 instance_profile = "bx2-2x8"
 enable_floating_ip = true  # Set to false for private-only access
-twingate_network = "redhat"  # Your Twingate network name
+twingate_network = ""  # Your Twingate network name
 ```
 
 #### Getting Twingate Tokens
@@ -101,7 +101,7 @@ cat > terraform.tfvars << EOF
 ssh_key_name = "twingate-connector-key"
 twingate_access_token = "$TWINGATE_ACCESS_TOKEN"
 twingate_refresh_token = "$TWINGATE_REFRESH_TOKEN"
-twingate_network = "redhat"
+twingate_network = ""
 instance_name = "my-twingate-connector"
 EOF
 
@@ -225,7 +225,7 @@ Available regions:
 
 ### Twingate Configuration
 The Twingate connector is configured with:
-- **Network**: `redhat`
+- **Network**: ``
 - **Access Token**: From your `tgconnect` file
 - **Refresh Token**: From your `tgconnect` file
 - **Deployment Label**: `terraform-ibm`
