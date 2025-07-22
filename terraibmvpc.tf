@@ -256,9 +256,9 @@ write_files:
 
 runcmd:
   # Debug: Log that runcmd started and cloud-init info
-  - echo "$(date): Cloud-init runcmd section started" >> /tmp/cloud-init-runcmd.log
-  - echo "$(date): Cloud-init version info" >> /tmp/cloud-init-runcmd.log
-  - cloud-init --version >> /tmp/cloud-init-runcmd.log 2>&1 || echo "cloud-init command not available" >> /tmp/cloud-init-runcmd.log
+  - 'echo "$(date): Cloud-init runcmd section started" >> /tmp/cloud-init-runcmd.log'
+  - 'echo "$(date): Cloud-init version info" >> /tmp/cloud-init-runcmd.log'
+  - 'cloud-init --version >> /tmp/cloud-init-runcmd.log 2>&1 || echo "cloud-init command not available" >> /tmp/cloud-init-runcmd.log'
   
   # Create log directory and set permissions
   - mkdir -p /var/log
@@ -266,26 +266,24 @@ runcmd:
   - chmod 644 /var/log/twingate-install.log
   
   # Log cloud-init start
-  - echo "$(date): Cloud-init runcmd section started" >> /var/log/twingate-install.log
+  - 'echo "$(date): Cloud-init runcmd section started" >> /var/log/twingate-install.log'
   
   # Debug: Check if twingate-setup.sh was created by write_files
-  - echo "$(date): Checking for /opt/twingate-setup.sh..." >> /var/log/twingate-install.log
-  - "ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo '$(date): /opt/twingate-setup.sh not found, creating inline...' >> /var/log/twingate-install.log"
-  
-
+  - 'echo "$(date): Checking for /opt/twingate-setup.sh..." >> /var/log/twingate-install.log'
+  - 'ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo "Setup script not found" >> /var/log/twingate-install.log'
   
   # Execute the Twingate setup script
-  - echo "$(date): Executing twingate setup script..." >> /var/log/twingate-install.log
+  - 'echo "$(date): Executing twingate setup script..." >> /var/log/twingate-install.log'
   - /opt/twingate-setup.sh
   
   # Log cloud-init completion
-  - echo "$(date): Cloud-init runcmd section completed" >> /var/log/twingate-install.log
+  - 'echo "$(date): Cloud-init runcmd section completed" >> /var/log/twingate-install.log'
   
   # Debug: Create summary of what happened
-  - echo "$(date): === DEBUG SUMMARY ===" >> /var/log/twingate-install.log
-  - echo "$(date): Cloud-init user-data processing completed" >> /var/log/twingate-install.log
-  - "ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo 'Setup script still missing' >> /var/log/twingate-install.log"
-  - "ls -la /tmp/cloud-init-debug.log >> /var/log/twingate-install.log 2>&1 || echo 'Debug log missing' >> /var/log/twingate-install.log"
+  - 'echo "$(date): === DEBUG SUMMARY ===" >> /var/log/twingate-install.log'
+  - 'echo "$(date): Cloud-init user-data processing completed" >> /var/log/twingate-install.log'
+  - 'ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo "Setup script still missing" >> /var/log/twingate-install.log'
+  - 'ls -la /tmp/cloud-init-debug.log >> /var/log/twingate-install.log 2>&1 || echo "Debug log missing" >> /var/log/twingate-install.log'
 
 final_message: "Twingate connector has been installed via Terraform cloud-init on CentOS Stream 9"
 EOF
