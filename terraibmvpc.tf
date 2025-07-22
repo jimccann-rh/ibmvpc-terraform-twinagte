@@ -195,8 +195,8 @@ write_files:
     permissions: '0644'
     owner: root:root
     content: |
-      Cloud-init write_files section executed at $(date)
-      
+      Cloud-init write_files section executed at "$(date)"
+            
   - path: /opt/twingate-setup.sh
     permissions: '0755'
     owner: root:root
