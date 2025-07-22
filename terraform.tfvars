@@ -23,7 +23,7 @@ instance_profile = "bx2-2x8"
 
 # Enable floating IP for external access (optional, default: true)
 # Set to false if you only need private network access
-enable_floating_ip = true
+enable_floating_ip = false
 
 # Twingate connector configuration (REQUIRED)
 # Get these values from your tgconnect file or Twingate admin console
