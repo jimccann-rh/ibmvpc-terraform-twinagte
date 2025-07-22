@@ -266,26 +266,53 @@ The Twingate connector is configured with:
    ibmcloud resource groups
    ```
 
-4. **Twingate Installation Failed or Log File Missing**
+4. **Cloud-Init Not Running or User-Data Issues**
+   
+   **Symptoms**: 
+   - Missing `/opt/twingate-setup.sh`, no logs in `/var/log/twingate-install.log`
+   - Error: "Unhandled non-multipart (text/x-not-multipart) userdata"
+   
+   **Possible Causes**:
+   - Cloud-init service not enabled on the image
+   - User-data format not recognized (fixed by removing base64 encoding)
+   - YAML formatting issues in cloud-config
+   - Terraform variable interpolation problems
+   - Cloud-init disabled or failing to start
+   
+   **Troubleshooting**:
+   ```bash
+   # Check if cloud-init is installed and enabled
+   systemctl status cloud-init
+   systemctl is-enabled cloud-init
+   
+   # Check user-data was received
+   sudo cat /var/lib/cloud/instance/user-data.txt
+   
+   # Check cloud-init logs for any errors
+   journalctl -u cloud-init-local --no-pager
+   journalctl -u cloud-init --no-pager
+   
+   # Check if our debug files were created
+   ls -la /tmp/cloud-init-*.log
+   
+   # Verify cloud-init configuration
+   cloud-init analyze show
+   ```
+
+5. **Twingate Installation Failed**
    ```bash
    # SSH to the instance and check logs
    ssh root@<public_ip>
    
-   # First, check if cloud-init completed
-   cloud-init status
-   
-   # If twingate-install.log doesn't exist, check cloud-init logs
+   # Check comprehensive logs
+   tail -f /var/log/twingate-install.log
    tail -f /var/log/cloud-init-output.log
-   tail -f /var/log/cloud-init.log
    
-   # Check if the setup script was created
-   ls -la /opt/twingate-setup.sh
+   # Check if fallback script was created and used
+   grep -i fallback /var/log/twingate-install.log
    
-   # If script exists but log doesn't, run manually
+   # Manually run setup if needed
    sudo /opt/twingate-setup.sh
-   
-   # Check for any errors in system logs
-   journalctl -u cloud-init --no-pager
    ```
 
 ### Debugging Commands
@@ -304,33 +331,83 @@ ssh root@<public_ip> 'tail -f /var/log/cloud-init.log'
 ssh root@<public_ip> 'journalctl -f'
 ```
 
-### Missing Log File Troubleshooting
+### "Unhandled non-multipart userdata" Error
 
-If `/var/log/twingate-install.log` is not present on the VSI:
+If you see the error "Unhandled non-multipart (text/x-not-multipart) userdata" in cloud-init logs:
 
+**This error has been fixed** in the current configuration by:
+- Removing base64 encoding from user_data (IBM Cloud VPC expects plain text)
+- Ensuring proper cloud-config YAML format
+- Adding cloud-init version logging for debugging
+
+**To verify the fix worked**:
 ```bash
-# 1. Check cloud-init status first
+# Check if cloud-init recognized the format
+sudo journalctl -u cloud-init --no-pager | grep -v "non-multipart"
+
+# Check cloud-init status
 cloud-init status
 
-# 2. Check cloud-init logs for errors
+# Look for our debug files
+ls -la /tmp/cloud-init-*.log
+```
+
+### Missing Files Troubleshooting
+
+If `/opt/twingate-setup.sh` or `/var/log/twingate-install.log` are missing:
+
+```bash
+# 1. Check cloud-init status and completion
+cloud-init status
+cloud-init status --wait  # Wait for completion if still running
+
+# 2. Check if cloud-init received user-data
+sudo cat /var/lib/cloud/instance/user-data.txt | head -20
+
+# 3. Check cloud-init logs for errors
 tail -100 /var/log/cloud-init.log | grep -i error
 tail -100 /var/log/cloud-init-output.log
 
-# 3. Verify the setup script was created
+# 4. Check debug files created by the new configuration
+ls -la /tmp/cloud-init-debug.log /tmp/cloud-init-runcmd.log
+cat /tmp/cloud-init-debug.log 2>/dev/null || echo "Debug log not found"
+cat /tmp/cloud-init-runcmd.log 2>/dev/null || echo "Runcmd log not found"
+
+# 5. Verify if write_files section worked
 ls -la /opt/twingate-setup.sh
-cat /opt/twingate-setup.sh
+cat /opt/twingate-setup.sh 2>/dev/null || echo "Setup script not found"
 
-# 4. Check if cloud-init ran the runcmd section
-grep -A 20 -B 5 "runcmd" /var/log/cloud-init.log
+# 6. Check cloud-init stages that ran
+grep -E "write_files|runcmd" /var/log/cloud-init.log
 
-# 5. Manually create log file and run setup if needed
-sudo mkdir -p /var/log
-sudo touch /var/log/twingate-install.log
-sudo chmod 644 /var/log/twingate-install.log
-sudo /opt/twingate-setup.sh
+# 7. If script is missing, check if fallback was created
+grep "fallback" /var/log/twingate-install.log 2>/dev/null || echo "No fallback info found"
 
-# 6. Check cloud-init final status
-cat /var/log/cloud-init-output.log | tail -20
+# 8. Manual troubleshooting - create and run script manually
+if [ ! -f /opt/twingate-setup.sh ]; then
+  echo "Creating manual setup script..."
+  sudo mkdir -p /opt
+  sudo cat > /opt/manual-twingate-setup.sh << 'EOF'
+#!/bin/bash
+dnf update -y
+dnf install -y curl wget
+export TWINGATE_ACCESS_TOKEN="your-token-here"
+export TWINGATE_REFRESH_TOKEN="your-refresh-token-here"  
+export TWINGATE_NETWORK="mynetwork"
+curl -fsSL "https://binaries.twingate.com/connector/setup.sh" | bash
+EOF
+  sudo chmod +x /opt/manual-twingate-setup.sh
+  echo "Manual script created. Edit tokens and run: sudo /opt/manual-twingate-setup.sh"
+fi
+
+# 9. Check cloud-init modules that ran
+cloud-init analyze show
+
+# 10. Re-run cloud-init if needed (be careful, this may have side effects)
+# sudo cloud-init clean
+# sudo cloud-init init
+# sudo cloud-init modules --mode=config
+# sudo cloud-init modules --mode=final
 ```
 
 ## Cleanup

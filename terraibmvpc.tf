@@ -272,6 +272,8 @@ runcmd:
   - echo "$(date): Checking for /opt/twingate-setup.sh..." >> /var/log/twingate-install.log
   - "ls -la /opt/twingate-setup.sh >> /var/log/twingate-install.log 2>&1 || echo '$(date): /opt/twingate-setup.sh not found, creating inline...' >> /var/log/twingate-install.log"
   
+
+  
   # Execute the Twingate setup script
   - echo "$(date): Executing twingate setup script..." >> /var/log/twingate-install.log
   - /opt/twingate-setup.sh
