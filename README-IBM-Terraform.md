@@ -79,6 +79,8 @@ instance_name = "twingate-connector"
 instance_profile = "bx2-2x8"
 enable_floating_ip = true  # Set to false for private-only access
 twingate_network = "mynetwork"  # Your Twingate network name
+create_second_vsi = false  # Set to true to create a second VSI without cloud-init
+second_instance_name = "second-vsi"  # Name for the second instance
 ```
 
 #### Getting Twingate Tokens
@@ -189,8 +191,9 @@ This Terraform configuration creates:
 - **Floating IP**: Public IP address for external access (enabled by default)
 
 ### Compute Resources
-- **Virtual Server Instance**: CentOS Stream 9 with Twingate connector
-- **Cloud-Init**: Automated Twingate installation on first boot
+- **Primary VSI**: CentOS Stream 9 with Twingate connector and cloud-init automation
+- **Second VSI** (optional): Clean CentOS Stream 9 instance without cloud-init user data
+- **Cloud-Init**: Automated Twingate installation on primary instance only
 
 ### Security Groups Rules
 - **Inbound SSH (Port 22)**: Access from anywhere
@@ -420,10 +423,13 @@ terraform destroy
 ## Cost Estimation
 
 Estimated monthly costs (US East region):
-- Virtual Server Instance (bx2-2x8): ~$30-40/month
-- Floating IP: ~$5/month
+- Primary Virtual Server Instance (bx2-2x8): ~$30-40/month
+- Second Virtual Server Instance (if enabled): ~$30-40/month
+- Floating IP(s): ~$5/month each
 - VPC resources: Minimal cost
-- **Total**: ~$35-45/month
+- **Total**: 
+  - Single VSI: ~$35-45/month
+  - Two VSIs with floating IPs: ~$70-85/month
 
 ## Security Considerations
 
@@ -524,4 +530,27 @@ enable_floating_ip = false
 - Lower cost (no floating IP charges)
 - More secure (no direct internet access)
 
-The Terraform outputs will automatically adjust based on your floating IP setting. 
+The Terraform outputs will automatically adjust based on your floating IP setting.
+
+### Second VSI Configuration
+You can optionally create a second VSI without cloud-init user data:
+
+```hcl
+# Enable second VSI (default: false)
+create_second_vsi = true
+second_instance_name = "my-second-server"
+```
+
+**With Second VSI Enabled:**
+- Creates an additional CentOS Stream 9 instance
+- Uses the same VPC, subnet, and security group
+- Same SSH key and instance profile as the first VSI
+- No cloud-init user data (clean CentOS installation)
+- Optional floating IP (follows the enable_floating_ip setting)
+- Separate outputs for second instance details
+
+**Use Cases for Second VSI:**
+- Testing environment alongside Twingate connector
+- Additional application server in the same network
+- Backup or development instance
+- Load balancer or proxy server 

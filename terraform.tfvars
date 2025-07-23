@@ -30,3 +30,9 @@ enable_floating_ip = false
 twingate_access_token = "your-twingate-access-token-here"
 twingate_refresh_token = "your-twingate-refresh-token-here"
 twingate_network = ""  # Your Twingate network name (optional, default: ) 
+
+# Second VSI configuration (optional, default: false)
+# Set to true to create a second VSI without cloud-init user data
+create_second_vsi = true
+second_instance_name = "second-vsi"  # Name for the second instance (optional)
+

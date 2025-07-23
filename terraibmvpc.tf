@@ -81,6 +81,18 @@ variable "twingate_network" {
   default     = "mynetwork"
 }
 
+variable "create_second_vsi" {
+  description = "Create a second VSI without cloud-init user data"
+  type        = bool
+  default     = false
+}
+
+variable "second_instance_name" {
+  description = "Name for the second virtual server instance"
+  type        = string
+  default     = "second-vsi"
+}
+
 # Data sources
 data "ibm_resource_group" "resource_group" {
   name = var.resource_group
@@ -316,6 +328,33 @@ resource "ibm_is_instance" "twingate_vsi" {
   depends_on = [ibm_is_subnet_public_gateway_attachment.twingate_gateway_attachment]
 }
 
+# Create second virtual server instance (optional, without user_data)
+resource "ibm_is_instance" "second_vsi" {
+  count          = var.create_second_vsi ? 1 : 0
+  name           = var.second_instance_name
+  vpc            = ibm_is_vpc.twingate_vpc.id
+  zone           = var.zone
+  profile        = var.instance_profile
+  image          = data.ibm_is_image.os_image.id
+  resource_group = data.ibm_resource_group.resource_group.id
+
+  primary_network_interface {
+    subnet          = ibm_is_subnet.twingate_subnet.id
+    security_groups = [ibm_is_security_group.twingate_sg.id]
+  }
+
+  keys = [data.ibm_is_ssh_key.ssh_key.id]
+
+  tags = [
+    "second-instance",
+    "centos",
+    "terraform"
+  ]
+
+  # Wait for subnet to have public gateway attached
+  depends_on = [ibm_is_subnet_public_gateway_attachment.twingate_gateway_attachment]
+}
+
 # Create floating IP for external access (enabled by default)
 resource "ibm_is_floating_ip" "twingate_fip" {
   count          = var.enable_floating_ip ? 1 : 0
@@ -326,6 +365,20 @@ resource "ibm_is_floating_ip" "twingate_fip" {
   tags = [
     "twingate",
     "connector",
+    "terraform"
+  ]
+}
+
+# Create floating IP for second instance (if both are enabled)
+resource "ibm_is_floating_ip" "second_fip" {
+  count          = var.create_second_vsi && var.enable_floating_ip ? 1 : 0
+  name           = "${var.second_instance_name}-fip"
+  target         = ibm_is_instance.second_vsi[0].primary_network_interface[0].id
+  resource_group = data.ibm_resource_group.resource_group.id
+
+  tags = [
+    "second-instance",
+    "centos",
     "terraform"
   ]
 }
@@ -374,4 +427,30 @@ output "debug_commands" {
 output "floating_ip_enabled" {
   description = "Whether floating IP is enabled for the instance"
   value       = var.enable_floating_ip
+}
+
+# Second VSI Outputs
+output "second_vsi_created" {
+  description = "Whether the second VSI was created"
+  value       = var.create_second_vsi
+}
+
+output "second_instance_id" {
+  description = "ID of the second virtual server instance (if created)"
+  value       = var.create_second_vsi ? ibm_is_instance.second_vsi[0].id : "Not created"
+}
+
+output "second_instance_private_ip" {
+  description = "Private IP address of the second instance (if created)"
+  value       = var.create_second_vsi ? ibm_is_instance.second_vsi[0].primary_network_interface[0].primary_ipv4_address : "Not created"
+}
+
+output "second_instance_public_ip" {
+  description = "Public IP address of the second instance (if floating IP enabled)"
+  value       = var.create_second_vsi && var.enable_floating_ip ? ibm_is_floating_ip.second_fip[0].address : "Not created or no floating IP"
+}
+
+output "second_ssh_command" {
+  description = "SSH command to connect to the second instance (if created and floating IP enabled)"
+  value       = var.create_second_vsi && var.enable_floating_ip ? "ssh root@${ibm_is_floating_ip.second_fip[0].address}" : "Not available - check if second VSI and floating IP are enabled"
 } 
