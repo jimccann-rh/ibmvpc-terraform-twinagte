@@ -32,6 +32,6 @@ twingate_refresh_token = "your-twingate-refresh-token-here"
 twingate_network = "mynetwork"  # Your Twingate network name (optional, default: mynetwork)
 
 # Second VSI configuration (optional, default: false)
-# Set to true to create a second VSI without cloud-init user data
+# Set to true to create a second VSI with Podman container runtime
 create_second_vsi = false
-second_instance_name = "second-vsi"  # Name for the second instance (optional) 
+second_instance_name = "podman-server"  # Name for the second instance (optional) 

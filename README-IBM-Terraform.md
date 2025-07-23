@@ -157,7 +157,7 @@ terraform output ssh_command
 ssh root@<public_ip>
 ```
 
-### Check Twingate Installation
+### Check Twingate Installation (Primary VSI)
 ```bash
 # Check installation log
 tail -f /var/log/twingate-install.log
@@ -179,6 +179,38 @@ ls -la /opt/twingate-setup.sh
 sudo /opt/twingate-setup.sh
 ```
 
+### Check Podman Installation (Second VSI)
+```bash
+# Check Podman installation log
+tail -f /var/log/podman-setup.log
+
+# Check Podman version and info
+podman --version
+podman info
+
+# Check Podman service status
+systemctl status podman.socket
+
+# Test Podman with hello-world container
+podman run --rm hello-world
+
+# Check installed container tools
+podman-compose --version
+buildah --version
+skopeo --version
+
+# Check sample container scripts
+ls -la /opt/containers/
+/opt/containers/hello-world.sh
+
+# Check rootless container configuration
+cat /etc/subuid | grep podman-user
+cat /etc/subgid | grep podman-user
+
+# Switch to podman-user and test rootless containers
+sudo -u podman-user podman run --rm hello-world
+```
+
 ## Architecture
 
 This Terraform configuration creates:
@@ -192,8 +224,10 @@ This Terraform configuration creates:
 
 ### Compute Resources
 - **Primary VSI**: CentOS Stream 9 with Twingate connector and cloud-init automation
-- **Second VSI** (optional): Clean CentOS Stream 9 instance without cloud-init user data
-- **Cloud-Init**: Automated Twingate installation on primary instance only
+- **Second VSI** (optional): CentOS Stream 9 with Podman container runtime and cloud-init automation
+- **Cloud-Init**: 
+  - Primary instance: Automated Twingate connector installation
+  - Second instance: Automated Podman installation and configuration
 
 ### Security Groups Rules
 - **Inbound SSH (Port 22)**: Access from anywhere
@@ -533,24 +567,35 @@ enable_floating_ip = false
 The Terraform outputs will automatically adjust based on your floating IP setting.
 
 ### Second VSI Configuration
-You can optionally create a second VSI without cloud-init user data:
+You can optionally create a second VSI with Podman container runtime:
 
 ```hcl
 # Enable second VSI (default: false)
 create_second_vsi = true
-second_instance_name = "my-second-server"
+second_instance_name = "podman-server"
 ```
 
 **With Second VSI Enabled:**
 - Creates an additional CentOS Stream 9 instance
 - Uses the same VPC, subnet, and security group
 - Same SSH key and instance profile as the first VSI
-- No cloud-init user data (clean CentOS installation)
+- **Automated Podman installation** via cloud-init user data
+- Podman, Podman-Compose, Buildah, and Skopeo pre-installed
+- Rootless container support configured
 - Optional floating IP (follows the enable_floating_ip setting)
 - Separate outputs for second instance details
 
-**Use Cases for Second VSI:**
-- Testing environment alongside Twingate connector
-- Additional application server in the same network
-- Backup or development instance
-- Load balancer or proxy server 
+**Podman Features Installed:**
+- **Podman**: Container runtime (Docker alternative)
+- **Podman-Compose**: Docker Compose equivalent
+- **Buildah**: Container image building tool
+- **Skopeo**: Container image management tool
+- **Rootless containers**: Secure container execution without root
+- **Sample container scripts**: Ready-to-use examples in `/opt/containers/`
+
+**Use Cases for Podman VSI:**
+- Container development and testing environment
+- Microservices deployment platform
+- CI/CD container runner
+- Application containerization testing
+- Docker alternative evaluation 

@@ -299,6 +299,127 @@ runcmd:
 
 final_message: "Twingate connector has been installed via Terraform cloud-init on CentOS Stream 9"
 EOF
+
+  # Cloud-init user data for second VSI - Podman installation
+  second_user_data = <<-EOF
+#cloud-config
+
+# Cloud-init configuration for Podman installation on CentOS Stream 9
+# Second VSI setup script
+
+package_update: true
+
+packages:
+  - podman
+  - podman-compose
+  - curl
+  - wget
+  - git
+
+write_files:
+  - path: /tmp/podman-setup-debug.log
+    permissions: '0644'
+    owner: root:root
+    content: |
+      Podman setup write_files section executed at ${timestamp()}
+      
+  - path: /opt/podman-setup.sh
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/bash
+      
+      # Podman Setup Script with Enhanced Logging
+      LOG_FILE="/var/log/podman-setup.log"
+      
+      # Create log file and set permissions
+      touch "$LOG_FILE"
+      chmod 644 "$LOG_FILE"
+      
+      echo "========================================" >> "$LOG_FILE"
+      echo "$(date): Starting Podman setup on CentOS Stream 9" >> "$LOG_FILE"
+      echo "Cloud-init user-data execution log" >> "$LOG_FILE"
+      echo "========================================" >> "$LOG_FILE"
+      
+      # Ensure system is up to date
+      echo "$(date): Updating system packages..." >> "$LOG_FILE"
+      dnf update -y >> "$LOG_FILE" 2>&1
+      echo "$(date): System update completed" >> "$LOG_FILE"
+      
+      # Install Podman and related tools
+      echo "$(date): Installing Podman and container tools..." >> "$LOG_FILE"
+      dnf install -y podman podman-compose buildah skopeo >> "$LOG_FILE" 2>&1
+      echo "$(date): Podman installation completed" >> "$LOG_FILE"
+      
+      # Enable and start Podman socket for rootless containers
+      echo "$(date): Configuring Podman service..." >> "$LOG_FILE"
+      systemctl enable podman.socket >> "$LOG_FILE" 2>&1
+      systemctl start podman.socket >> "$LOG_FILE" 2>&1
+      echo "$(date): Podman socket service configured" >> "$LOG_FILE"
+      
+      # Create a test user for rootless containers
+      echo "$(date): Creating podman user for rootless containers..." >> "$LOG_FILE"
+      useradd -m -s /bin/bash podman-user >> "$LOG_FILE" 2>&1 || echo "User already exists" >> "$LOG_FILE"
+      
+      # Configure subuid and subgid for rootless containers
+      echo "$(date): Configuring subuid and subgid for rootless containers..." >> "$LOG_FILE"
+      echo "podman-user:100000:65536" >> /etc/subuid
+      echo "podman-user:100000:65536" >> /etc/subgid
+      
+      # Test Podman installation
+      echo "$(date): Testing Podman installation..." >> "$LOG_FILE"
+      podman --version >> "$LOG_FILE" 2>&1
+      podman info >> "$LOG_FILE" 2>&1
+      
+      # Create sample container configuration
+      echo "$(date): Creating sample container setup..." >> "$LOG_FILE"
+      mkdir -p /opt/containers
+      cat > /opt/containers/hello-world.sh << 'CONTAINER_EOF'
+      #!/bin/bash
+      echo "Running hello-world container with Podman..."
+      podman run --rm hello-world
+      CONTAINER_EOF
+      chmod +x /opt/containers/hello-world.sh
+      
+      echo "========================================" >> "$LOG_FILE"
+      echo "$(date): Podman setup script completed" >> "$LOG_FILE"
+      echo "$(date): Podman version: $(podman --version)" >> "$LOG_FILE"
+      echo "========================================" >> "$LOG_FILE"
+
+runcmd:
+  # Debug: Log that runcmd started for second VSI
+  - echo "$(date): Second VSI runcmd section started" >> /tmp/podman-setup-debug.log
+  - echo "$(date): Podman cloud-init runcmd section started" >> /tmp/podman-runcmd.log
+  - echo "$(date): Cloud-init version info" >> /tmp/podman-runcmd.log
+  - cloud-init --version >> /tmp/podman-runcmd.log 2>&1 || echo "cloud-init command not available" >> /tmp/podman-runcmd.log
+  
+  # Create log directory and set permissions
+  - mkdir -p /var/log
+  - touch /var/log/podman-setup.log
+  - chmod 644 /var/log/podman-setup.log
+  
+  # Log cloud-init start
+  - echo "$(date): Podman setup runcmd section started" >> /var/log/podman-setup.log
+  
+  # Debug: Check if podman-setup.sh was created by write_files
+  - echo "$(date): Checking for /opt/podman-setup.sh..." >> /var/log/podman-setup.log
+  - ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script not found" >> /var/log/podman-setup.log
+  
+  # Execute the Podman setup script
+  - echo "$(date): Executing podman setup script..." >> /var/log/podman-setup.log
+  - /opt/podman-setup.sh
+  
+  # Log cloud-init completion
+  - echo "$(date): Podman setup runcmd section completed" >> /var/log/podman-setup.log
+  
+  # Debug: Create summary of what happened
+  - echo "$(date): === PODMAN SETUP SUMMARY ===" >> /var/log/podman-setup.log
+  - echo "$(date): Cloud-init user-data processing completed" >> /var/log/podman-setup.log
+  - ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script still missing" >> /var/log/podman-setup.log
+  - ls -la /tmp/podman-setup-debug.log >> /var/log/podman-setup.log 2>&1 || echo "Debug log missing" >> /var/log/podman-setup.log
+
+final_message: "Podman has been installed and configured via Terraform cloud-init on CentOS Stream 9"
+EOF
 }
 
 # Create virtual server instance
@@ -328,7 +449,7 @@ resource "ibm_is_instance" "twingate_vsi" {
   depends_on = [ibm_is_subnet_public_gateway_attachment.twingate_gateway_attachment]
 }
 
-# Create second virtual server instance (optional, without user_data)
+# Create second virtual server instance (optional, with Podman user_data)
 resource "ibm_is_instance" "second_vsi" {
   count          = var.create_second_vsi ? 1 : 0
   name           = var.second_instance_name
@@ -337,6 +458,7 @@ resource "ibm_is_instance" "second_vsi" {
   profile        = var.instance_profile
   image          = data.ibm_is_image.os_image.id
   resource_group = data.ibm_resource_group.resource_group.id
+  user_data      = local.second_user_data
 
   primary_network_interface {
     subnet          = ibm_is_subnet.twingate_subnet.id
@@ -453,4 +575,14 @@ output "second_instance_public_ip" {
 output "second_ssh_command" {
   description = "SSH command to connect to the second instance (if created and floating IP enabled)"
   value       = var.create_second_vsi && var.enable_floating_ip ? "ssh root@${ibm_is_floating_ip.second_fip[0].address}" : "Not available - check if second VSI and floating IP are enabled"
+}
+
+output "podman_setup_log" {
+  description = "Commands to check Podman installation on second VSI"
+  value       = var.create_second_vsi && var.enable_floating_ip ? "SSH: ssh root@${ibm_is_floating_ip.second_fip[0].address} | Logs: tail -f /var/log/podman-setup.log | Debug: ls -la /tmp/podman-*.log" : "Not available - check if second VSI and floating IP are enabled"
+}
+
+output "podman_debug_commands" {
+  description = "Debug commands for Podman setup on second VSI"
+  value       = "podman --version; podman info; ls -la /opt/containers/; tail -20 /var/log/podman-setup.log"
 } 
