@@ -373,7 +373,7 @@ write_files:
 
       # Configure git to use the PAT for GitHub authentication
       git config --global credential.helper store
-      echo "https://oauth2:${GITHUB_PAT}@github.com" > ~/.git-credentials
+      echo "https://oauth2:$${GITHUB_PAT}@github.com" > ~/.git-credentials
 
       echo "Cloning repository..."
 
