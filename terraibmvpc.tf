@@ -311,7 +311,6 @@ package_update: true
 
 packages:
   - podman
-  - podman-compose
   - curl
   - wget
   - git
@@ -349,7 +348,6 @@ write_files:
       # Install Podman and related tools
       echo "$(date): Installing Podman and container tools..." >> "$LOG_FILE"
       dnf install -y podman buildah skopeo >> "$LOG_FILE" 2>&1
-      #dnf install -y podman podman-compose buildah skopeo >> "$LOG_FILE" 2>&1
       echo "$(date): Podman installation completed" >> "$LOG_FILE"
       
     #  # Enable and start Podman socket for rootless containers
