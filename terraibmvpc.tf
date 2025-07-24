@@ -363,7 +363,7 @@ write_files:
       #!/bin/bash
       
       # Check if GitHub Personal Access Token is provided via environment variable
-      if [ -z "$GITHUB_PAT" ]; then
+      if [ -z "$$GITHUB_PAT" ]; then
           echo "Error: GITHUB_PAT environment variable is not set!"
           echo "Please run the container with: podman run -e GITHUB_PAT=your_token_here ..."
           exit 1
@@ -454,7 +454,7 @@ write_files:
 #!/bin/bash
 echo "Running Fedora development container with setup-repos.sh..."
 echo "Usage: Set GITHUB_PAT environment variable before running"
-echo "Example: GITHUB_PAT=your_token podman run -ti -e GITHUB_PAT=\$GITHUB_PAT -v /opt/setup-repos.sh:/workspace/setup-repos.sh:ro --rm localhost/fedora-dev:latest"
+echo "Example: GITHUB_PAT=your_token podman run -ti -e GITHUB_PAT=\$$GITHUB_PAT -v /opt/setup-repos.sh:/workspace/setup-repos.sh:ro --rm localhost/fedora-dev:latest"
 RUN_EOF
         chmod +x /opt/containers/run-fedora-dev.sh
         echo "$(date): Container run script created at /opt/containers/run-fedora-dev.sh" >> "$LOG_FILE"
