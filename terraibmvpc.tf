@@ -431,16 +431,8 @@ write_files:
       echo "$(date): Testing Podman installation..." >> "$LOG_FILE"
       podman --version >> "$LOG_FILE" 2>&1
       podman info >> "$LOG_FILE" 2>&1t
-      
-    #  # Execute repository setup script
-    #  echo "$(date): Running repository setup script..." >> "$LOG_FILE"
-    #  if [ -f "/opt/setup-repos.sh" ]; then
-    #    /opt/setup-repos.sh >> "$LOG_FILE" 2>&1
-    #    echo "$(date): Repository setup completed" >> "$LOG_FILE"
-    #  else
-    #    echo "$(date): Repository setup script not found" >> "$LOG_FILE"
-    #  fi
-      
+     
+     
       # Create sample container configuration
       echo "$(date): Creating sample container setup..." >> "$LOG_FILE"
       mkdir -p /opt/containers
@@ -552,7 +544,7 @@ resource "ibm_is_instance" "second_vsi" {
     "second-instance",
     "centos",
     "terraform"
-  ]_
+  ]
 
   # Wait for subnet to have public gateway attached
   depends_on = [ibm_is_subnet_public_gateway_attachment.twingate_gateway_attachment]
@@ -570,6 +562,7 @@ resource "ibm_is_floating_ip" "twingate_fip" {
     "connector",
     "terraform"
   ]
+
 }
 
 # Create floating IP for second instance (if both are enabled)
@@ -593,7 +586,7 @@ output "instance_id" {
 }
 
 output "instance_private_ip" {
-  description = "Private IP address of the instance"_
+  description = "Private IP address of the instance"
   value       = ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ipv4_address
 }
 
