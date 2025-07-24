@@ -373,35 +373,35 @@ write_files:
 
 runcmd:
   # Debug: Log that runcmd started for second VSI
-  - echo "$(date): Second VSI runcmd section started" >> /tmp/podman-setup-debug.log
-  - echo "$(date): Podman cloud-init runcmd section started" >> /tmp/podman-runcmd.log
-  - echo "$(date): Cloud-init version info" >> /tmp/podman-runcmd.log
-  - cloud-init --version >> /tmp/podman-runcmd.log 2>&1 || echo "cloud-init command not available" >> /tmp/podman-runcmd.log
+  - 'echo "$(date): Second VSI runcmd section started" >> /tmp/podman-setup-debug.log'
+  - 'echo "$(date): Podman cloud-init runcmd section started" >> /tmp/podman-runcmd.log'
+  - 'echo "$(date): Cloud-init version info" >> /tmp/podman-runcmd.log'
+  - 'cloud-init --version >> /tmp/podman-runcmd.log 2>&1 || echo "cloud-init command not available" >> /tmp/podman-runcmd.log'
   
   # Create log directory and set permissions
-  - mkdir -p /var/log
-  - touch /var/log/podman-setup.log
-  - chmod 644 /var/log/podman-setup.log
+  - 'mkdir -p /var/log'
+  - 'touch /var/log/podman-setup.log'
+  - 'chmod 644 /var/log/podman-setup.log'
   
   # Log cloud-init start
-  - echo "$(date): Podman setup runcmd section started" >> /var/log/podman-setup.log
+  - 'echo "$(date): Podman setup runcmd section started" >> /var/log/podman-setup.log'
   
   # Debug: Check if podman-setup.sh was created by write_files
-  - echo "$(date): Checking for /opt/podman-setup.sh..." >> /var/log/podman-setup.log
-  - ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script not found" >> /var/log/podman-setup.log
+  - 'echo "$(date): Checking for /opt/podman-setup.sh..." >> /var/log/podman-setup.log'
+  - 'ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script not found" >> /var/log/podman-setup.log'
   
   # Execute the Podman setup script
-  - echo "$(date): Executing podman setup script..." >> /var/log/podman-setup.log
-  - /opt/podman-setup.sh
+  - 'echo "$(date): Executing podman setup script..." >> /var/log/podman-setup.log'
+  - '/opt/podman-setup.sh'
   
   # Log cloud-init completion
-  - echo "$(date): Podman setup runcmd section completed" >> /var/log/podman-setup.log
+  - 'echo "$(date): Podman setup runcmd section completed" >> /var/log/podman-setup.log'
   
   # Debug: Create summary of what happened
-  - echo "$(date): === PODMAN SETUP SUMMARY ===" >> /var/log/podman-setup.log
-  - echo "$(date): Cloud-init user-data processing completed" >> /var/log/podman-setup.log
-  - ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script still missing" >> /var/log/podman-setup.log
-  - ls -la /tmp/podman-setup-debug.log >> /var/log/podman-setup.log 2>&1 || echo "Debug log missing" >> /var/log/podman-setup.log
+  - 'echo "$(date): === PODMAN SETUP SUMMARY ===" >> /var/log/podman-setup.log'
+  - 'echo "$(date): Cloud-init user-data processing completed" >> /var/log/podman-setup.log'
+  - 'ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script still missing" >> /var/log/podman-setup.log'
+  - 'ls -la /tmp/podman-setup-debug.log >> /var/log/podman-setup.log 2>&1 || echo "Debug log missing" >> /var/log/podman-setup.log'
 
 final_message: "Podman has been installed and configured via Terraform cloud-init on CentOS Stream 9"
 EOF
