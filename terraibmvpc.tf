@@ -342,9 +342,7 @@ write_files:
       # Create workspace directory
       RUN mkdir -p /workspace
 
-      # Copy the repository setup script (to be run at runtime with environment variable)
-      COPY setup-repos.sh /workspace/setup-repos.sh
-      RUN chmod +x /workspace/setup-repos.sh
+             # Note: setup-repos.sh will be available at runtime from /opt/setup-repos.sh on the host
 
       # Verify installations
       RUN python3 --version && \
@@ -399,7 +397,7 @@ write_files:
       echo "Git credentials cleaned up for security."       
       
   - path: /opt/podman-setup.sh
-    permissions: '0755't
+    permissions: '0755'
     owner: root:root
     content: |
       #!/bin/bash
@@ -430,7 +428,7 @@ write_files:
       # Test Podman installation
       echo "$(date): Testing Podman installation..." >> "$LOG_FILE"
       podman --version >> "$LOG_FILE" 2>&1
-      podman info >> "$LOG_FILE" 2>&1t
+      podman info >> "$LOG_FILE" 2>&1
      
      
       # Create sample container configuration
@@ -443,17 +441,29 @@ write_files:
       CONTAINER_EOF
       chmod +x /opt/containers/hello-world.sh
       
-      # Build the Fedora ping container
-      echo "$(date): Building Fedora ping container..." >> "$LOG_FILE"
-      if [ -f "/opt/Dockerfile" ] && [ -f "/opt/containers/build-fedora-ping.sh" ]; then
-        /opt/containers/build-fedora-ping.sh >> "$LOG_FILE" 2>&1
+      # Build the Fedora container
+      echo "$(date): Building Fedora development container..." >> "$LOG_FILE"
+      if [ -f "/opt/Dockerfile" ]; then
+        cd /opt
+        echo "$(date): Building container from /opt/Dockerfile..." >> "$LOG_FILE"
+        podman build -t localhost/fedora-dev:latest -f Dockerfile . >> "$LOG_FILE" 2>&1
         echo "$(date): Container build completed" >> "$LOG_FILE"
+        
+        # Create container run script
+        cat > /opt/containers/run-fedora-dev.sh << 'RUN_EOF'
+#!/bin/bash
+echo "Running Fedora development container with setup-repos.sh..."
+echo "Usage: Set GITHUB_PAT environment variable before running"
+echo "Example: GITHUB_PAT=your_token podman run -ti -e GITHUB_PAT=\$GITHUB_PAT -v /opt/setup-repos.sh:/workspace/setup-repos.sh:ro --rm localhost/fedora-dev:latest"
+RUN_EOF
+        chmod +x /opt/containers/run-fedora-dev.sh
+        echo "$(date): Container run script created at /opt/containers/run-fedora-dev.sh" >> "$LOG_FILE"
       else
-        echo "$(date): Dockerfile or build script not found" >> "$LOG_FILE"
+        echo "$(date): Dockerfile not found" >> "$LOG_FILE"
       fi
       
       echo "========================================" >> "$LOG_FILE"
-      echo "$(date): Podman setup script completed" >> "$LOG_FILE"t
+      echo "$(date): Podman setup script completed" >> "$LOG_FILE"
       echo "$(date): Podman version: $(podman --version)" >> "$LOG_FILE"
       echo "$(date): Available containers:" >> "$LOG_FILE"
       podman images >> "$LOG_FILE" 2>&1
