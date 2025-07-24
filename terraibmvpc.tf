@@ -311,10 +311,10 @@ package_update: true
 
 packages:
   - podman
-  - podman-compose
   - curl
   - wget
   - git
+  - tmux
 
 write_files:
   - path: /tmp/podman-setup-debug.log
@@ -323,8 +323,94 @@ write_files:
     content: |
       Podman setup write_files section executed at ${timestamp()}
       
-  - path: /opt/podman-setup.sh
+  - path: /opt/Dockerfile
+    permissions: '0644'
+    owner: root:root
+    content: |
+      # Fedora-based container with ping utility
+      FROM fedora:latest
+      
+      # Update system and install ping utility
+      RUN dnf update -y && \
+          dnf install -y iputils && \
+          dnf clean all
+      
+      # Set working directory
+      WORKDIR /app
+      
+      # Create a simple script for ping testing
+      RUN echo '#!/bin/bash' > /app/ping-test.sh && \
+          echo 'echo "Starting ping test container..."' >> /app/ping-test.sh && \
+          echo 'ping -c 5 8.8.8.8' >> /app/ping-test.sh && \
+          echo 'echo "Ping test completed"' >> /app/ping-test.sh && \
+          chmod +x /app/ping-test.sh
+      
+      # Default command
+      CMD ["/app/ping-test.sh"]
+      
+  - path: /opt/setup-repos.sh
     permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/bash
+      
+      # Repository Setup Script for Podman Container Development
+      LOG_FILE="/var/log/repo-setup.log"
+      
+      echo "========================================" >> "$LOG_FILE"
+      echo "$(date): Starting repository setup" >> "$LOG_FILE"
+      echo "========================================" >> "$LOG_FILE"
+      
+      # Create development directories
+      echo "$(date): Creating development directories..." >> "$LOG_FILE"
+      mkdir -p /opt/containers/builds
+      mkdir -p /opt/containers/images
+      mkdir -p /opt/containers/volumes
+      
+      # Set up container registry configuration
+      echo "$(date): Configuring container registries..." >> "$LOG_FILE"
+      cat > /etc/containers/registries.conf << 'REGISTRY_EOF'
+      # Container registry configuration
+      [registries.search]
+      registries = ['docker.io', 'quay.io', 'registry.fedoraproject.org']
+      
+      [registries.insecure]
+      registries = []
+      
+      [registries.block]
+      registries = []
+      REGISTRY_EOF
+      
+      # Create container build script
+      echo "$(date): Creating container build script..." >> "$LOG_FILE"
+      cat > /opt/containers/build-fedora-ping.sh << 'BUILD_EOF'
+      #!/bin/bash
+      echo "Building Fedora ping container..."
+      cd /opt
+      podman build -t localhost/fedora-ping:latest -f Dockerfile .
+      echo "Container build completed"
+      podman images
+      BUILD_EOF
+      chmod +x /opt/containers/build-fedora-ping.sh
+      
+      # Create container run script
+      echo "$(date): Creating container run script..." >> "$LOG_FILE"
+      cat > /opt/containers/run-fedora-ping.sh << 'RUN_EOF'
+      #!/bin/bash
+      echo "Running Fedora ping container..."
+      podman run --rm --name fedora-ping-test localhost/fedora-ping:latest
+      RUN_EOF
+      chmod +x /opt/containers/run-fedora-ping.sh
+      
+      echo "========================================" >> "$LOG_FILE"
+      echo "$(date): Repository setup completed" >> "$LOG_FILE"
+      echo "$(date): Available scripts:" >> "$LOG_FILE"
+      echo "$(date):   /opt/containers/build-fedora-ping.sh" >> "$LOG_FILE"
+      echo "$(date):   /opt/containers/run-fedora-ping.sh" >> "$LOG_FILE"
+      echo "========================================" >> "$LOG_FILE"
+      
+  - path: /opt/podman-setup.sh
+    permissions: '0755't
     owner: root:root
     content: |
       #!/bin/bash
@@ -349,28 +435,22 @@ write_files:
       # Install Podman and related tools
       echo "$(date): Installing Podman and container tools..." >> "$LOG_FILE"
       dnf install -y podman buildah skopeo >> "$LOG_FILE" 2>&1
-      #dnf install -y podman podman-compose buildah skopeo >> "$LOG_FILE" 2>&1
       echo "$(date): Podman installation completed" >> "$LOG_FILE"
       
-    #  # Enable and start Podman socket for rootless containers
-    #  echo "$(date): Configuring Podman service..." >> "$LOG_FILE"
-    #  systemctl enable podman.socket >> "$LOG_FILE" 2>&1
-    #  systemctl start podman.socket >> "$LOG_FILE" 2>&1
-    #  echo "$(date): Podman socket service configured" >> "$LOG_FILE"
-      
-    #  # Create a test user for rootless containers
-    #  echo "$(date): Creating podman user for rootless containers..." >> "$LOG_FILE"
-    #  useradd -m -s /bin/bash podman-user >> "$LOG_FILE" 2>&1 || echo "User already exists" >> "$LOG_FILE"
-      
-    #  # Configure subuid and subgid for rootless containers
-    #  echo "$(date): Configuring subuid and subgid for rootless containers..." >> "$LOG_FILE"
-    #  echo "podman-user:100000:65536" >> /etc/subuid
-    #  echo "podman-user:100000:65536" >> /etc/subgid
-     
+   
       # Test Podman installation
       echo "$(date): Testing Podman installation..." >> "$LOG_FILE"
       podman --version >> "$LOG_FILE" 2>&1
-      podman info >> "$LOG_FILE" 2>&1
+      podman info >> "$LOG_FILE" 2>&1t
+      
+    #  # Execute repository setup script
+    #  echo "$(date): Running repository setup script..." >> "$LOG_FILE"
+    #  if [ -f "/opt/setup-repos.sh" ]; then
+    #    /opt/setup-repos.sh >> "$LOG_FILE" 2>&1
+    #    echo "$(date): Repository setup completed" >> "$LOG_FILE"
+    #  else
+    #    echo "$(date): Repository setup script not found" >> "$LOG_FILE"
+    #  fi
       
       # Create sample container configuration
       echo "$(date): Creating sample container setup..." >> "$LOG_FILE"
@@ -382,42 +462,53 @@ write_files:
       CONTAINER_EOF
       chmod +x /opt/containers/hello-world.sh
       
+      # Build the Fedora ping container
+      echo "$(date): Building Fedora ping container..." >> "$LOG_FILE"
+      if [ -f "/opt/Dockerfile" ] && [ -f "/opt/containers/build-fedora-ping.sh" ]; then
+        /opt/containers/build-fedora-ping.sh >> "$LOG_FILE" 2>&1
+        echo "$(date): Container build completed" >> "$LOG_FILE"
+      else
+        echo "$(date): Dockerfile or build script not found" >> "$LOG_FILE"
+      fi
+      
       echo "========================================" >> "$LOG_FILE"
-      echo "$(date): Podman setup script completed" >> "$LOG_FILE"
+      echo "$(date): Podman setup script completed" >> "$LOG_FILE"t
       echo "$(date): Podman version: $(podman --version)" >> "$LOG_FILE"
+      echo "$(date): Available containers:" >> "$LOG_FILE"
+      podman images >> "$LOG_FILE" 2>&1
       echo "========================================" >> "$LOG_FILE"
 
 runcmd:
   # Debug: Log that runcmd started for second VSI
-  - echo "$(date): Second VSI runcmd section started" >> /tmp/podman-setup-debug.log
-  - echo "$(date): Podman cloud-init runcmd section started" >> /tmp/podman-runcmd.log
-  - echo "$(date): Cloud-init version info" >> /tmp/podman-runcmd.log
-  - cloud-init --version >> /tmp/podman-runcmd.log 2>&1 || echo "cloud-init command not available" >> /tmp/podman-runcmd.log
+  - 'echo "$(date): Second VSI runcmd section started" >> /tmp/podman-setup-debug.log'
+  - 'echo "$(date): Podman cloud-init runcmd section started" >> /tmp/podman-runcmd.log'
+  - 'echo "$(date): Cloud-init version info" >> /tmp/podman-runcmd.log'
+  - 'cloud-init --version >> /tmp/podman-runcmd.log 2>&1 || echo "cloud-init command not available" >> /tmp/podman-runcmd.log'
   
   # Create log directory and set permissions
-  - mkdir -p /var/log
-  - touch /var/log/podman-setup.log
-  - chmod 644 /var/log/podman-setup.log
+  - 'mkdir -p /var/log'
+  - 'touch /var/log/podman-setup.log'
+  - 'chmod 644 /var/log/podman-setup.log'
   
   # Log cloud-init start
-  - echo "$(date): Podman setup runcmd section started" >> /var/log/podman-setup.log
+  - 'echo "$(date): Podman setup runcmd section started" >> /var/log/podman-setup.log'
   
   # Debug: Check if podman-setup.sh was created by write_files
-  - echo "$(date): Checking for /opt/podman-setup.sh..." >> /var/log/podman-setup.log
-  - ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script not found" >> /var/log/podman-setup.log
+  - 'echo "$(date): Checking for /opt/podman-setup.sh..." >> /var/log/podman-setup.log'
+  - 'ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script not found" >> /var/log/podman-setup.log'
   
   # Execute the Podman setup script
-  - echo "$(date): Executing podman setup script..." >> /var/log/podman-setup.log
-  - /opt/podman-setup.sh
+  - 'echo "$(date): Executing podman setup script..." >> /var/log/podman-setup.log'
+  - '/opt/podman-setup.sh'
   
   # Log cloud-init completion
-  - echo "$(date): Podman setup runcmd section completed" >> /var/log/podman-setup.log
+  - 'echo "$(date): Podman setup runcmd section completed" >> /var/log/podman-setup.log'
   
   # Debug: Create summary of what happened
-  - echo "$(date): === PODMAN SETUP SUMMARY ===" >> /var/log/podman-setup.log
-  - echo "$(date): Cloud-init user-data processing completed" >> /var/log/podman-setup.log
-  - ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script still missing" >> /var/log/podman-setup.log
-  - ls -la /tmp/podman-setup-debug.log >> /var/log/podman-setup.log 2>&1 || echo "Debug log missing" >> /var/log/podman-setup.log
+  - 'echo "$(date): === PODMAN SETUP SUMMARY ===" >> /var/log/podman-setup.log'
+  - 'echo "$(date): Cloud-init user-data processing completed" >> /var/log/podman-setup.log'
+  - 'ls -la /opt/podman-setup.sh >> /var/log/podman-setup.log 2>&1 || echo "Setup script still missing" >> /var/log/podman-setup.log'
+  - 'ls -la /tmp/podman-setup-debug.log >> /var/log/podman-setup.log 2>&1 || echo "Debug log missing" >> /var/log/podman-setup.log'
 
 final_message: "Podman has been installed and configured via Terraform cloud-init on CentOS Stream 9"
 EOF
