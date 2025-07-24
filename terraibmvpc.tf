@@ -348,24 +348,25 @@ write_files:
       
       # Install Podman and related tools
       echo "$(date): Installing Podman and container tools..." >> "$LOG_FILE"
-      dnf install -y podman podman-compose buildah skopeo >> "$LOG_FILE" 2>&1
+      dnf install -y podman buildah skopeo >> "$LOG_FILE" 2>&1
+      #dnf install -y podman podman-compose buildah skopeo >> "$LOG_FILE" 2>&1
       echo "$(date): Podman installation completed" >> "$LOG_FILE"
       
-      # Enable and start Podman socket for rootless containers
-      echo "$(date): Configuring Podman service..." >> "$LOG_FILE"
-      systemctl enable podman.socket >> "$LOG_FILE" 2>&1
-      systemctl start podman.socket >> "$LOG_FILE" 2>&1
-      echo "$(date): Podman socket service configured" >> "$LOG_FILE"
+    #  # Enable and start Podman socket for rootless containers
+    #  echo "$(date): Configuring Podman service..." >> "$LOG_FILE"
+    #  systemctl enable podman.socket >> "$LOG_FILE" 2>&1
+    #  systemctl start podman.socket >> "$LOG_FILE" 2>&1
+    #  echo "$(date): Podman socket service configured" >> "$LOG_FILE"
       
-      # Create a test user for rootless containers
-      echo "$(date): Creating podman user for rootless containers..." >> "$LOG_FILE"
-      useradd -m -s /bin/bash podman-user >> "$LOG_FILE" 2>&1 || echo "User already exists" >> "$LOG_FILE"
+    #  # Create a test user for rootless containers
+    #  echo "$(date): Creating podman user for rootless containers..." >> "$LOG_FILE"
+    #  useradd -m -s /bin/bash podman-user >> "$LOG_FILE" 2>&1 || echo "User already exists" >> "$LOG_FILE"
       
-      # Configure subuid and subgid for rootless containers
-      echo "$(date): Configuring subuid and subgid for rootless containers..." >> "$LOG_FILE"
-      echo "podman-user:100000:65536" >> /etc/subuid
-      echo "podman-user:100000:65536" >> /etc/subgid
-      
+    #  # Configure subuid and subgid for rootless containers
+    #  echo "$(date): Configuring subuid and subgid for rootless containers..." >> "$LOG_FILE"
+    #  echo "podman-user:100000:65536" >> /etc/subuid
+    #  echo "podman-user:100000:65536" >> /etc/subgid
+     
       # Test Podman installation
       echo "$(date): Testing Podman installation..." >> "$LOG_FILE"
       podman --version >> "$LOG_FILE" 2>&1
