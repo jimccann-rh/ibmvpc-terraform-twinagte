@@ -603,7 +603,7 @@ output "instance_id" {
 
 output "instance_private_ip" {
   description = "Private IP address of the instance"
-  value       = ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ipv4_address
+  value       = ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ip[0].address
 }
 
 output "instance_public_ip" {
@@ -628,7 +628,7 @@ output "subnet_id" {
 
 output "twingate_install_log" {
   description = "Commands to check Twingate installation"
-  value       = var.enable_floating_ip ? "SSH: ssh root@${ibm_is_floating_ip.twingate_fip[0].address} | Check: ls -la /opt/twingate-setup.sh /tmp/cloud-init-*.log | Logs: tail -f /var/log/twingate-install.log" : "SSH: ssh root@${ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ipv4_address} | Check: ls -la /opt/twingate-setup.sh /tmp/cloud-init-*.log"
+  value       = var.enable_floating_ip ? "SSH: ssh root@${ibm_is_floating_ip.twingate_fip[0].address} | Check: ls -la /opt/twingate-setup.sh /tmp/cloud-init-*.log | Logs: tail -f /var/log/twingate-install.log" : "SSH: ssh root@${ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ip[0].address} | Check: ls -la /opt/twingate-setup.sh /tmp/cloud-init-*.log"
 }
 
 output "debug_commands" {
@@ -654,7 +654,7 @@ output "second_instance_id" {
 
 output "second_instance_private_ip" {
   description = "Private IP address of the second instance (if created)"
-  value       = var.create_second_vsi ? ibm_is_instance.second_vsi[0].primary_network_interface[0].primary_ipv4_address : "Not created"
+  value       = var.create_second_vsi ? ibm_is_instance.second_vsi[0].primary_network_interface[0].primary_ip[0].address : "Not created"
 }
 
 output "second_instance_public_ip" {
