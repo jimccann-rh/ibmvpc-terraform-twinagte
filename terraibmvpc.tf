@@ -328,7 +328,7 @@ write_files:
     owner: root:root
     content: |
       # Fedora-based container
-      FROM docker.io/library/fedora:latest
+      FROM docker.io/library/fedora:latestGITHUB_PAT
 
       # Update package manager and install packages
       RUN dnf update -y && \
@@ -451,11 +451,12 @@ write_files:
         
         # Create container run script
         cat > /opt/containers/run-fedora-dev.sh << 'RUN_EOF'
-#!/bin/bash
-echo "Running Fedora development container with setup-repos.sh..."
-echo "Usage: Set GITHUB_PAT environment variable before running"
-echo "Example: GITHUB_PAT=your_token podman run -ti -e GITHUB_PAT=\$$GITHUB_PAT -v /opt/setup-repos.sh:/workspace/setup-repos.sh:ro --rm localhost/fedora-dev:latest"
-RUN_EOF
+
+        #!/bin/bash
+        echo "Running Fedora development container with setup-repos.sh..."
+        echo "Usage: Set GITHUB_PAT environment variable before running"
+        echo "Example: GITHUB_PAT=your_token podman run -ti -e GITHUB_PAT=\$$GITHUB_PAT -v /opt/setup-repos.sh:/workspace/setup-repos.sh:ro --rm localhost/fedora-dev:latest"
+        RUN_EOF
         chmod +x /opt/containers/run-fedora-dev.sh
         echo "$(date): Container run script created at /opt/containers/run-fedora-dev.sh" >> "$LOG_FILE"
       else
