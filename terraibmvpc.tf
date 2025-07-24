@@ -454,16 +454,16 @@ write_files:
         podman build -t localhost/fedora-dev:latest -f Dockerfile . >> "$LOG_FILE" 2>&1
         echo "$(date): Container build completed" >> "$LOG_FILE"
         
-        # Create container run script
-        cat > /opt/containers/run-fedora-dev.sh << 'RUN_EOF'
-
-        #!/bin/bash
-        echo "Running Fedora development container with setup-repos.sh..."
-        echo "Usage: Set GITHUB_PAT environment variable before running"
-        echo "Example: GITHUB_PAT=your_token podman run -ti -e GITHUB_PAT=\$GITHUB_PAT -v /opt/setup-repos.sh:/workspace/setup-repos.sh:ro --rm localhost/fedora-dev:latest"
-        RUN_EOF
-        chmod +x /opt/containers/run-fedora-dev.sh
-        echo "$(date): Container run script created at /opt/containers/run-fedora-dev.sh" >> "$LOG_FILE"
+      #  # Create container run script
+      #  cat > /opt/containers/run-fedora-dev.sh << 'RUN_EOF'
+        echo "podman run -ti -e GITHUB_PAT="github_pat_***" --rm --replace --name rota-jimccann localhost/fedora-dev:latest"
+      #  #!/bin/bash
+      #  echo "Running Fedora development container with setup-repos.sh..."
+      #  echo "Usage: Set GITHUB_PAT environment variable before running"
+      #  echo "Example: GITHUB_PAT=your_token podman run -ti -e GITHUB_PAT=\$GITHUB_PAT -v /opt/setup-repos.sh:/workspace/setup-repos.sh:ro --rm localhost/fedora-dev:latest"
+      #  RUN_EOF
+      #  chmod +x /opt/containers/run-fedora-dev.sh
+      #  echo "$(date): Container run script created at /opt/containers/run-fedora-dev.sh" >> "$LOG_FILE"
       else
         echo "$(date): Dockerfile not found" >> "$LOG_FILE"
       fi
