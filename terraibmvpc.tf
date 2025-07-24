@@ -327,26 +327,36 @@ write_files:
     permissions: '0644'
     owner: root:root
     content: |
-      # Fedora-based container with ping utility
-      FROM fedora:latest
-      
-      # Update system and install ping utility
+      # Fedora-based container
+      FROM docker.io/library/fedora:latest
+
+      # Update package manager and install packages
       RUN dnf update -y && \
-          dnf install -y iputils && \
+          dnf install -y iputils python3 python3-pip curl git && \
           dnf clean all
-      
+
+      # Install Poetry using the official installer
+      RUN curl -sSL https://install.python-poetry.org | python3 - && \
+          ln -s /root/.local/bin/poetry /usr/local/bin/poetry
+
+      # Create workspace directory
+      RUN mkdir -p /workspace
+
+      # Copy the repository setup script (to be run at runtime with environment variable)
+      COPY setup-repos.sh /workspace/setup-repos.sh
+      RUN chmod +x /workspace/setup-repos.sh
+
+      # Verify installations
+      RUN python3 --version && \
+          poetry --version && \
+          git --version && \
+          ping -c 1 -W 1 127.0.0.1 || echo "Ping test completed"
+
       # Set working directory
-      WORKDIR /app
-      
-      # Create a simple script for ping testing
-      RUN echo '#!/bin/bash' > /app/ping-test.sh && \
-          echo 'echo "Starting ping test container..."' >> /app/ping-test.sh && \
-          echo 'ping -c 5 8.8.8.8' >> /app/ping-test.sh && \
-          echo 'echo "Ping test completed"' >> /app/ping-test.sh && \
-          chmod +x /app/ping-test.sh
-      
-      # Default command
-      CMD ["/app/ping-test.sh"]
+      WORKDIR /workspace
+
+      # Set a default command
+      CMD ["/bin/bash"] 
       
   - path: /opt/setup-repos.sh
     permissions: '0755'
@@ -354,60 +364,39 @@ write_files:
     content: |
       #!/bin/bash
       
-      # Repository Setup Script for Podman Container Development
-      LOG_FILE="/var/log/repo-setup.log"
-      
-      echo "========================================" >> "$LOG_FILE"
-      echo "$(date): Starting repository setup" >> "$LOG_FILE"
-      echo "========================================" >> "$LOG_FILE"
-      
-      # Create development directories
-      echo "$(date): Creating development directories..." >> "$LOG_FILE"
-      mkdir -p /opt/containers/builds
-      mkdir -p /opt/containers/images
-      mkdir -p /opt/containers/volumes
-      
-      # Set up container registry configuration
-      echo "$(date): Configuring container registries..." >> "$LOG_FILE"
-      cat > /etc/containers/registries.conf << 'REGISTRY_EOF'
-      # Container registry configuration
-      [registries.search]
-      registries = ['docker.io', 'quay.io', 'registry.fedoraproject.org']
-      
-      [registries.insecure]
-      registries = []
-      
-      [registries.block]
-      registries = []
-      REGISTRY_EOF
-      
-      # Create container build script
-      echo "$(date): Creating container build script..." >> "$LOG_FILE"
-      cat > /opt/containers/build-fedora-ping.sh << 'BUILD_EOF'
-      #!/bin/bash
-      echo "Building Fedora ping container..."
-      cd /opt
-      podman build -t localhost/fedora-ping:latest -f Dockerfile .
-      echo "Container build completed"
-      podman images
-      BUILD_EOF
-      chmod +x /opt/containers/build-fedora-ping.sh
-      
-      # Create container run script
-      echo "$(date): Creating container run script..." >> "$LOG_FILE"
-      cat > /opt/containers/run-fedora-ping.sh << 'RUN_EOF'
-      #!/bin/bash
-      echo "Running Fedora ping container..."
-      podman run --rm --name fedora-ping-test localhost/fedora-ping:latest
-      RUN_EOF
-      chmod +x /opt/containers/run-fedora-ping.sh
-      
-      echo "========================================" >> "$LOG_FILE"
-      echo "$(date): Repository setup completed" >> "$LOG_FILE"
-      echo "$(date): Available scripts:" >> "$LOG_FILE"
-      echo "$(date):   /opt/containers/build-fedora-ping.sh" >> "$LOG_FILE"
-      echo "$(date):   /opt/containers/run-fedora-ping.sh" >> "$LOG_FILE"
-      echo "========================================" >> "$LOG_FILE"
+      # Check if GitHub Personal Access Token is provided via environment variable
+      if [ -z "$GITHUB_PAT" ]; then
+          echo "Error: GITHUB_PAT environment variable is not set!"
+          echo "Please run the container with: podman run -e GITHUB_PAT=your_token_here ..."
+          exit 1
+      fi
+
+      echo "Setting up Git configuration with PAT..."
+
+      # Configure git to use the PAT for GitHub authentication
+      git config --global credential.helper store
+      echo "https://oauth2:${GITHUB_PAT}@github.com" > ~/.git-credentials
+
+      echo "Cloning repository..."
+
+      # Clone the infra-toolbox repository
+      if [ ! -d "infra-toolbox" ]; then
+          echo "Cloning infra-toolbox..."
+          git clone https://github.com/jimccann-rh/infra-toolbox.git
+      else
+          echo "infra-toolbox already exists, pulling latest changes..."
+          cd infra-toolbox && git pull && cd ..
+      fi
+
+      echo "Repository setup complete!"
+      echo "Available repository:"
+      ls -la /workspace/
+
+      # Clean up credentials for security
+      rm -f ~/.git-credentials
+      git config --global --unset credential.helper
+
+      echo "Git credentials cleaned up for security."       
       
   - path: /opt/podman-setup.sh
     permissions: '0755't
@@ -563,7 +552,7 @@ resource "ibm_is_instance" "second_vsi" {
     "second-instance",
     "centos",
     "terraform"
-  ]
+  ]_
 
   # Wait for subnet to have public gateway attached
   depends_on = [ibm_is_subnet_public_gateway_attachment.twingate_gateway_attachment]
@@ -604,7 +593,7 @@ output "instance_id" {
 }
 
 output "instance_private_ip" {
-  description = "Private IP address of the instance"
+  description = "Private IP address of the instance"_
   value       = ibm_is_instance.twingate_vsi.primary_network_interface[0].primary_ipv4_address
 }
 
