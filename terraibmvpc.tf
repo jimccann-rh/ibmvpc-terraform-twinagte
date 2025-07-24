@@ -328,7 +328,7 @@ write_files:
     owner: root:root
     content: |
       # Fedora-based container
-      FROM docker.io/library/fedora:latestGITHUB_PAT
+      FROM docker.io/library/fedora:latest
 
       # Update package manager and install packages
       RUN dnf update -y && \
@@ -342,7 +342,12 @@ write_files:
       # Create workspace directory
       RUN mkdir -p /workspace
 
-             # Note: setup-repos.sh will be available at runtime from /opt/setup-repos.sh on the host
+
+      # Copy the repository setup script (to be run at runtime with environment variable)
+      COPY setup-repos.sh /workspace/setup-repos.sh
+      RUN chmod +x /workspace/setup-repos.sh
+
+      # Note: setup-repos.sh will be available at runtime from /opt/setup-repos.sh on the host
 
       # Verify installations
       RUN python3 --version && \
@@ -363,7 +368,7 @@ write_files:
       #!/bin/bash
       
       # Check if GitHub Personal Access Token is provided via environment variable
-      if [ -z "$$GITHUB_PAT" ]; then
+      if [ -z "$GITHUB_PAT" ]; then
           echo "Error: GITHUB_PAT environment variable is not set!"
           echo "Please run the container with: podman run -e GITHUB_PAT=your_token_here ..."
           exit 1
@@ -455,7 +460,7 @@ write_files:
         #!/bin/bash
         echo "Running Fedora development container with setup-repos.sh..."
         echo "Usage: Set GITHUB_PAT environment variable before running"
-        echo "Example: GITHUB_PAT=your_token podman run -ti -e GITHUB_PAT=\$$GITHUB_PAT -v /opt/setup-repos.sh:/workspace/setup-repos.sh:ro --rm localhost/fedora-dev:latest"
+        echo "Example: GITHUB_PAT=your_token podman run -ti -e GITHUB_PAT=\$GITHUB_PAT -v /opt/setup-repos.sh:/workspace/setup-repos.sh:ro --rm localhost/fedora-dev:latest"
         RUN_EOF
         chmod +x /opt/containers/run-fedora-dev.sh
         echo "$(date): Container run script created at /opt/containers/run-fedora-dev.sh" >> "$LOG_FILE"
