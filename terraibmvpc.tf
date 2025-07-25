@@ -328,7 +328,7 @@ write_files:
     owner: root:root
     content: |
       #podman build -t localhost/fedora-dev:latest -f Dockerfile .
-      podman run -ti -e GITHUB_PAT="github_pat_***" --rm --replace --name rota-jimccann localhost/fedora-dev:latest
+      podman run -ti -e GITHUB_PAT="github_pat_***" --rm --replace --name rota-jimccann localhost/fedora-dev:latest tmux
            
   - path: /opt/Dockerfile
     permissions: '0644'
@@ -353,9 +353,7 @@ write_files:
       # Copy the repository setup script (to be run at runtime with environment variable)
       COPY setup-repos.sh /workspace/setup-repos.sh
       RUN chmod +x /workspace/setup-repos.sh
-
-      # Note: setup-repos.sh will be available at runtime from /opt/setup-repos.sh on the host
-
+      
       # Verify installations
       RUN python3 --version && \
           poetry --version && \
@@ -407,9 +405,12 @@ write_files:
       git config --global --unset credential.helper
 
       echo "Git credentials cleaned up for security."
-      
+      python3 -m venv .venv
+      . .venv/bin/activate
       cd /workspace/infra-toolbox/apps/support-toolkit
       poetry install --no-root
+      echo "run . .venv/bin/activate"
+      echo "run deactivate to exit out of venv"
 
   - path: /opt/podman-setup.sh
     permissions: '0755'
