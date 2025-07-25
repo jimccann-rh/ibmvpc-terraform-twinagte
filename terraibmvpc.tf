@@ -315,7 +315,7 @@ packages:
   - wget
   - git
   - tmux
-
+  
 write_files:
   - path: /tmp/podman-setup-debug.log
     permissions: '0644'
@@ -338,7 +338,7 @@ write_files:
 
       # Update package manager and install packages
       RUN dnf update -y && \
-          dnf install -y iputils python3 python3-pip curl git && \
+          dnf install -y iputils python3 python3-devel python3-pip gcc curl git && \
           dnf clean all
 
       # Install Poetry using the official installer
@@ -405,8 +405,11 @@ write_files:
       rm -f ~/.git-credentials
       git config --global --unset credential.helper
 
-      echo "Git credentials cleaned up for security."       
+      echo "Git credentials cleaned up for security."
       
+      cd /workspace/infra-toolbox/apps/support-toolkit
+      poetry install --no-root
+
   - path: /opt/podman-setup.sh
     permissions: '0755'
     owner: root:root
