@@ -207,7 +207,8 @@ write_files:
     permissions: '0644'
     owner: root:root
     content: |
-      Cloud-init write_files section executed at ${timestamp()}
+      # Cloud-init write_files section executed at ${timestamp()}
+      # The actual date will be added by the runcmd script.
             
   - path: /opt/twingate-setup.sh
     permissions: '0755'
@@ -321,7 +322,9 @@ write_files:
     permissions: '0644'
     owner: root:root
     content: |
-      Podman setup write_files section executed at ${timestamp()}
+      # Podman setup write_files section executed at ${timestamp()}
+      Podman setup write_files section prepared.
+      # The actual date will be added by the runcmd script.
 
   - path: /opt/runrota.sh
     permissions: '0744'
