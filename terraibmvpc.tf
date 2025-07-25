@@ -327,6 +327,7 @@ write_files:
     permissions: '0744'
     owner: root:root
     content: |
+      #podman build -t localhost/fedora-dev:latest -f Dockerfile .
       podman run -ti -e GITHUB_PAT="github_pat_***" --rm --replace --name rota-jimccann localhost/fedora-dev:latest
            
   - path: /opt/Dockerfile
