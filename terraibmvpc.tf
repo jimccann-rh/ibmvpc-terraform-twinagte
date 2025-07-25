@@ -540,6 +540,11 @@ resource "ibm_is_instance" "twingate_vsi" {
     "terraform"
   ]
 
+  # Lifecycle rule to ignore changes to user_data
+  lifecycle {
+    ignore_changes = [user_data]
+  }
+
   # Wait for subnet to have public gateway attached
   depends_on = [ibm_is_subnet_public_gateway_attachment.twingate_gateway_attachment]
 }
@@ -567,6 +572,11 @@ resource "ibm_is_instance" "second_vsi" {
     "centos",
     "terraform"
   ]
+
+  # Lifecycle rule to ignore changes to user_data
+  lifecycle {
+    ignore_changes = [user_data]
+  }
 
   # Wait for subnet to have public gateway attached
   depends_on = [ibm_is_subnet_public_gateway_attachment.twingate_gateway_attachment]
