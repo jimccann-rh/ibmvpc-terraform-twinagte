@@ -575,7 +575,7 @@ resource "ibm_is_instance" "second_vsi" {
 
   # Lifecycle rule to ignore changes to user_data
   lifecycle {
-    ignore_changes = [user_data]
+    # ignore_changes = [user_data]
   }
 
   # Wait for subnet to have public gateway attached
