@@ -93,6 +93,12 @@ variable "second_instance_name" {
   default     = "second-vsi"
 }
 
+variable "vpc_address_prefix_cidr" {
+  description = "CIDR block for the VPC address prefix"
+  type        = string
+  default     = "10.130.81.16/28"
+}
+
 # Data sources
 data "ibm_resource_group" "resource_group" {
   name = var.resource_group
@@ -127,7 +133,7 @@ resource "ibm_is_vpc_address_prefix" "twingate_address_prefix" {
   name = "${var.instance_name}-address-prefix"
   vpc  = ibm_is_vpc.twingate_vpc.id
   zone = var.zone
-  cidr = "10.130.81.16/28"
+  cidr = var.vpc_address_prefix_cidr
 
   tags = [
     "twingate",
